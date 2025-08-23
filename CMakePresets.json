@@ -1,0 +1,25 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "clang-cl",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}\\scripts\\buildsystems\\vcpkg.cmake",
+                "VCPKG_OVERLAY_TRIPLETS": "D:\\src\\my-vcpkg-triplets",
+                "VCPKG_TARGET_TRIPLETS": "x64-win-llvm"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "clang-cl",
+            "description" : "",
+            "configurePreset": "clang-cl"
+        }
+    ]
+}
