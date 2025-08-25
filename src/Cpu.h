@@ -37,20 +37,14 @@ public:
 
     void Step();
     void Execute(uint8_t opcode);
-    // More of a convenience testing function
-    void Execute(Instruction inst,
-                    Registers::Target src = Registers::Target::NONE,
-                    Registers::Target dst = Registers::Target::NONE);
 
     friend std::ostream& operator<<(std::ostream&, Cpu const& cpu);
     friend class CpuOperator;
 
 public:
-    uint8_t ReadFromReg(Registers::Target target);
-    uint8_t ExecutePrefixed(uint8_t opcode);
-
+    bool ime = true;
     uint16_t pc; // Program Counter
-    uint16_t sp; // Program Counter
+    uint16_t sp; // ???
     Registers reg;
     // MemoryBus m_bus;
     uint8_t ram[0xFFFF];

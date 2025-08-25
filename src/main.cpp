@@ -12,23 +12,31 @@ std::ostream& operator<<(std::ostream& os, Registers const& reg)
 int main()
 {
     Cpu cpu;
-    cpu.pc = 39227;
-    cpu.sp = 41151;
-    cpu.reg.a = 125;
-    cpu.reg.b = 86;
-    cpu.reg.c = 182;
-    cpu.reg.d = 23;
-    cpu.reg.e = 236;
-    cpu.reg.f = 0;
-    cpu.reg.h = 167;
-    cpu.reg.l = 96;
+    cpu.pc = 16701;
+    cpu.sp = 3350;
+    cpu.reg.a = 199;
+    cpu.reg.b = 79;
+    cpu.reg.c = 6;
+    cpu.reg.d = 5;
+    cpu.reg.e = 239;
+    cpu.reg.f = 16;
+    cpu.reg.h = 227;
+    cpu.reg.l = 181;
     // cpu.ime = 1;
     // cpu.ie = 0;
-    cpu.ram[39227] = 4;
+    cpu.ram[16701] = 8;
+    cpu.ram[16702] = 3;
+    cpu.ram[16703] = 194;
+    cpu.ram[49667] = 0;
+    cpu.ram[49668] = 0;
 
     // Act
     std::cout << cpu << std::endl;
+    std::cout << cpu.ram[49667] << std::endl;
+    std::cout << cpu.ram[49668] << std::endl;
     cpu.Step();
+    std::cout << cpu.ram[49667] << std::endl;
+    std::cout << cpu.ram[49668] << std::endl;
 
     // Assert
     // REQUIRE(cpu.reg.a == 81);

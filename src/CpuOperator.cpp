@@ -1,192 +1,116 @@
 #include "CpuOperator.h"
 #include "Cpu.h"
+#include "Registers.h"
 #include <functional>
-#include <iostream>
 
 using I = Cpu::Instruction;
 using R = Registers::Target;
+using F = Registers::Flags;
 
 template<R T>
 concept SmallReg = T == R::A || T == R::B || T == R::C || T == R::D ||
-    T == R::E || T == R::H || T == R::L;
+    T == R::E || T == R::H || T == R::L || T == R::N;
 
 template <R T>
-concept LargeReg = T == R::BC || T == R::DE || T == R::HL;
+concept LargeReg = T == R::BC || T == R::DE || T == R::HL || T == R::SP || T == R::NN;
 
 template <R T>
 concept RegTarget = (SmallReg<T> || LargeReg<T>);
 
-// TODO: Consider this section
-/*
-uint8_t CpuOperator::Execute(Cpu& cpu, uint8_t opcode)
+inline uint16_t ToU16(uint8_t hibyte, uint8_t lobyte)
 {
-    switch (opcode)
-    {
-        case 0x02:
-            return Add(cpu, Reg::BC, 1);
-        case 0x06:
-            return Load(cpu, Reg::BN, Reg::NONE); // TODO: Unimplemented?
-        case 0x13:
-            return Add(cpu, Reg::DE, 1);
-        case 0x41:
-            return Load(cpu, Reg::B, Reg::C);
-    }
-    throw std::logic_error("Unsupported instruction byte code");
-    if (opcode == 0xCB)
-    {
-        // TODO: m_pc + 1 or ++m_pc?
-        auto prefixedOpCode = cpu.m_bus.ReadByte(cpu.m_pc + 1);
-        return ExecutePrefixed(cpu, prefixedOpCode);
-    }
-    return 0;
+    return (hibyte << 8) | lobyte;
 }
 
-uint8_t CpuOperator::ExecutePrefixed(Cpu& cpu, uint8_t opcode)
+inline uint8_t ToLoU8(uint16_t word)
 {
-    throw std::logic_error("Unsupported instruction byte code");
-    return 0;
+    return static_cast<uint8_t>(word & 0xFF);
 }
-*/
+
+inline uint8_t ToHiU8(uint16_t word)
+{
+    return word >> 8;
+}
 
 namespace {
-void Noop(Cpu& cpu)
+
+template <R Src>
+inline uint8_t Read(Cpu& cpu) requires SmallReg<Src>;
+template <> inline uint8_t Read<R::A>(Cpu& cpu) { return cpu.reg.a; }
+template <> inline uint8_t Read<R::B>(Cpu& cpu) { return cpu.reg.b; }
+template <> inline uint8_t Read<R::C>(Cpu& cpu) { return cpu.reg.c; }
+template <> inline uint8_t Read<R::D>(Cpu& cpu) { return cpu.reg.d; }
+template <> inline uint8_t Read<R::E>(Cpu& cpu) { return cpu.reg.e; }
+template <> inline uint8_t Read<R::H>(Cpu& cpu) { return cpu.reg.h; }
+template <> inline uint8_t Read<R::L>(Cpu& cpu) { return cpu.reg.l; }
+template <> inline uint8_t Read<R::N>(Cpu& cpu) { return cpu.ram[++cpu.pc]; }
+
+template <R Src>
+inline uint16_t ReadWord(Cpu& cpu) requires LargeReg<Src>;
+template <> inline uint16_t ReadWord<R::BC>(Cpu& cpu) { return ToU16(Read<R::B>(cpu), Read<R::C>(cpu)); }
+template <> inline uint16_t ReadWord<R::DE>(Cpu& cpu) { return ToU16(Read<R::D>(cpu), Read<R::E>(cpu)); }
+template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu) { return ToU16(Read<R::H>(cpu), Read<R::L>(cpu)); }
+template <> inline uint16_t ReadWord<R::SP>(Cpu& cpu) { return cpu.sp; }
+template <> inline uint16_t ReadWord<R::NN>(Cpu& cpu) {
+    auto lobyte = cpu.ram[++cpu.pc];
+    auto hibyte = cpu.ram[++cpu.pc];
+    return ToU16(hibyte, lobyte);
+}
+
+// SET | 8 Bit Register
+template <R Dst>
+inline void Set(Cpu& cpu, uint8_t value) requires SmallReg<Dst>;
+template <> inline void Set<R::A>(Cpu& cpu, uint8_t value) { cpu.reg.a = value; }
+template <> inline void Set<R::B>(Cpu& cpu, uint8_t value) { cpu.reg.b = value; }
+template <> inline void Set<R::C>(Cpu& cpu, uint8_t value) { cpu.reg.c = value; }
+template <> inline void Set<R::D>(Cpu& cpu, uint8_t value) { cpu.reg.d = value; }
+template <> inline void Set<R::E>(Cpu& cpu, uint8_t value) { cpu.reg.e = value; }
+template <> inline void Set<R::H>(Cpu& cpu, uint8_t value) { cpu.reg.h = value; }
+template <> inline void Set<R::L>(Cpu& cpu, uint8_t value) { cpu.reg.l = value; }
+
+// SET | 16 Bit Register
+template <R Dst>
+inline void SetWord(Cpu& cpu, uint16_t value) requires LargeReg<Dst>;
+template <> inline void SetWord<R::BC>(Cpu& cpu, uint16_t value) { Set<R::B>(cpu, ToHiU8(value)); Set<R::C>(cpu, ToLoU8(value)); }
+template <> inline void SetWord<R::DE>(Cpu& cpu, uint16_t value) { Set<R::D>(cpu, ToHiU8(value)); Set<R::E>(cpu, ToLoU8(value)); }
+template <> inline void SetWord<R::HL>(Cpu& cpu, uint16_t value) { Set<R::H>(cpu, ToHiU8(value)); Set<R::L>(cpu, ToLoU8(value)); }
+template <> inline void SetWord<R::SP>(Cpu& cpu, uint16_t value) { cpu.sp = value; }
+template <> inline void SetWord<R::NN>(Cpu& cpu, uint16_t value) {
+    auto nn = ReadWord<R::NN>(cpu);
+    cpu.ram[nn++] = ToLoU8(value);
+    cpu.ram[nn] = ToHiU8(value);
+}
+
+// LOAD
+template <R Dst, R Src>
+void Load(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
 {
+    Set<Dst>(cpu, Read<Src>(cpu));
     ++cpu.pc;
-    return;
-}
-
-template <R Src>
-uint8_t& Get(Cpu& cpu) requires SmallReg<Src>
-{
-    if constexpr(Src == R::A)
-        return cpu.reg.a;
-    if constexpr(Src == R::B)
-        return cpu.reg.b;
-    if constexpr(Src == R::C)
-        return cpu.reg.c;
-    if constexpr(Src == R::D)
-        return cpu.reg.d;
-    if constexpr(Src == R::E)
-        return cpu.reg.e;
-    if constexpr(Src == R::H)
-        return cpu.reg.h;
-    if constexpr(Src == R::L)
-        return cpu.reg.l;
-}
-
-template <R Src>
-uint8_t& GetLo(Cpu& cpu) requires LargeReg<Src>
-{
-    if constexpr(Src == R::BC)
-        return cpu.reg.c;
-    if constexpr(Src == R::DE)
-        return cpu.reg.e;
-    if constexpr(Src == R::HL)
-        return cpu.reg.l;
-}
-
-template <R Src>
-uint8_t& GetHi(Cpu& cpu) requires LargeReg<Src>
-{
-    if constexpr(Src == R::BC)
-        return cpu.reg.b;
-    if constexpr(Src == R::DE)
-        return cpu.reg.d;
-    if constexpr(Src == R::HL)
-        return cpu.reg.h;
-}
-
-template <R Dst>
-void Set(Cpu& cpu, uint16_t value) requires SmallReg<Dst>
-{
-    Get<Dst>(cpu) = value;
-}
-
-template <R Dst>
-void Set(Cpu& cpu, uint16_t value) requires LargeReg<Dst>
-{
-    uint8_t hibyte = value >> 8;
-    uint8_t lobyte = value & 0xff;
-
-    if constexpr(Dst == R::BC)
-    {
-        Set<R::B>(cpu, hibyte);
-        Set<R::C>(cpu, lobyte);
-    }
-    else if constexpr(Dst == R::DE)
-    {
-        Set<R::D>(cpu, hibyte);
-        Set<R::E>(cpu, lobyte);
-    }
-    else if constexpr(Dst == R::HL)
-    {
-        Set<R::H>(cpu, hibyte);
-        Set<R::L>(cpu, lobyte);
-    }
-}
-
-template <R Src>
-uint16_t Read(Cpu& cpu) requires SmallReg<Src>
-{
-    return Get<Src>(cpu);
-}
-
-template <R Src>
-uint16_t Read(Cpu& cpu) requires LargeReg<Src>
-{
-    // Wide Reads
-    uint16_t res = 0;
-    if constexpr(Src == R::BC)
-    {
-        res |= cpu.reg.b << 8;
-        res |= cpu.reg.c;
-    }
-    if constexpr(Src == R::DE)
-    {
-        res |= cpu.reg.d << 8;
-        res |= cpu.reg.e;
-    }
-    if constexpr(Src == R::HL)
-    {
-        res |= cpu.reg.h << 8;
-        res |= cpu.reg.l;
-    }
-    return res;
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires (Src == R::NN) && LargeReg<Dst>
+void Load(Cpu& cpu) requires LargeReg<Dst> && LargeReg<Src>
 {
-    if constexpr(Dst == R::BC)
-    {
-        Set<R::C>(cpu, cpu.ram[++cpu.pc]);
-        Set<R::B>(cpu, cpu.ram[++cpu.pc]);
-    }
-    else if constexpr(Dst == R::DE)
-    {
-        Set<R::E>(cpu, cpu.ram[++cpu.pc]);
-        Set<R::D>(cpu, cpu.ram[++cpu.pc]);
-    }
-    else if constexpr(Dst == R::HL)
-    {
-        Set<R::L>(cpu, cpu.ram[++cpu.pc]);
-        Set<R::H>(cpu, cpu.ram[++cpu.pc]);
-    }
+    SetWord<Dst>(cpu, ReadWord<Src>(cpu));
+    ++cpu.pc;
+}
+
+// Indirect Load
+template <R Dst, R Src>
+void Load(Cpu& cpu) requires SmallReg<Dst> && LargeReg<Src>
+{
+    auto addr = ReadWord<Src>(cpu);
+    Set<Dst>(cpu, cpu.ram[addr]);
     ++cpu.pc;
 }
 
 template <R Dst, R Src>
 void Load(Cpu& cpu) requires LargeReg<Dst> && SmallReg<Src>
 {
-    auto addr = Read<Dst>(cpu);
+    auto addr = ReadWord<Dst>(cpu);
     cpu.ram[addr] = Read<Src>(cpu);
     ++cpu.pc;
-}
-
-template <R Dst, R Src>
-void Add(Cpu& cpu)
-{
-    Add<Dst>(cpu, Read<Src>());
 }
 
 template <R Dst>
@@ -195,13 +119,12 @@ void Add(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
     uint8_t ori_value = Read<Dst>(cpu);
     uint8_t new_value = ori_value + value;
 
-    cpu.reg.f &= ~(Registers::Flags::NEGATE_FLAG | Registers::Flags::ZERO_FLAG | Registers::Flags::HALF_CARRY_FLAG) ;
-    // cpu.reg.f = 0;
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= Registers::Flags::ZERO_FLAG;
+        cpu.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) + (value & 0xF) > 0xF)
-        cpu.reg.f |= Registers::Flags::HALF_CARRY_FLAG;
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
 
     Set<Dst>(cpu, new_value);
     ++cpu.pc;
@@ -210,22 +133,33 @@ void Add(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
 template <R Dst>
 void Add(Cpu& cpu, uint16_t value) requires LargeReg<Dst>
 {
-    uint16_t ori_value = Read<Dst>(cpu);
+    auto ori_value = ReadWord<Dst>(cpu);
     uint16_t new_value = ori_value + value;
 
-    cpu.reg.f &= !Registers::Flags::ALL;
-    // cpu.reg.f = 0;
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG | F:: CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= Registers::Flags::ZERO_FLAG;
+        cpu.reg.f |= F::ZERO_FLAG;
 
-    if ((ori_value & 0xF) + (value & 0xF) > 0xF)
-        cpu.reg.f |= Registers::Flags::HALF_CARRY_FLAG;
+    if ((ori_value & 0xFFF) + (value & 0xFFF) > 0xFFF)
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
 
     if (new_value < ori_value)
-        cpu.reg.f |=  Registers::Flags::CARRY_FLAG;
+        cpu.reg.f |= F::CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
+    SetWord<Dst>(cpu, new_value);
     ++cpu.pc;
+}
+
+template <R Dst, R Src>
+void Add(Cpu& cpu) requires SmallReg<Dst>
+{
+    Add<Dst>(cpu, Read<Src>());
+}
+
+template <R Dst, R Src>
+void Add(Cpu& cpu) requires LargeReg<Dst>
+{
+    Add<Dst>(cpu, ReadWord<Src>(cpu));
 }
 
 template <R Dst>
@@ -237,55 +171,125 @@ void Inc(Cpu& cpu) requires SmallReg<Dst>
 template <R Dst>
 void Inc(Cpu& cpu) requires LargeReg<Dst>
 {
-    auto& lobyte = GetLo<Dst>(cpu);
-    ++lobyte;
-    if (lobyte == 0)
-    {
-        ++GetHi<Dst>(cpu);
-    }
+    SetWord<Dst>(cpu, ReadWord<Dst>(cpu) + 1);
     ++cpu.pc;
 }
 
-template <R Dst, R Src>
-void Sub(Cpu& cpu)
-{
-    Sub<Dst>(cpu, Read<Src>());
-}
-
 template <R Dst>
-void Sub(Cpu& cpu, uint16_t value)
+void Sub(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
 {
-    uint16_t ori_value = Read<Dst>(cpu);
-    uint16_t new_value = ori_value - value;
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value - value;
 
-    cpu.reg.f &= !Registers::Flags::ALL;
-    cpu.reg.f |= Registers::Flags::NEGATE_FLAG; 
+    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG);
+    cpu.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= Registers::Flags::ZERO_FLAG;
+        cpu.reg.f |= F::ZERO_FLAG;
 
-    if ((ori_value & 0xF) - (value & 0xF) > 0xF)
-        cpu.reg.f |= Registers::Flags::HALF_CARRY_FLAG;
-
-    if (new_value > cpu.reg.a)
-        cpu.reg.f |=  Registers::Flags::CARRY_FLAG;
+    if ((ori_value & 0xF) < (value & 0xF))
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
 
     Set<Dst>(cpu, new_value);
     ++cpu.pc;
 }
 
 template <R Dst>
-void Dec(Cpu& cpu)
+void Dec(Cpu& cpu) requires SmallReg<Dst>
 {
     Sub<Dst>(cpu, 1);
+}
+
+template <R Dst>
+void Dec(Cpu& cpu) requires LargeReg<Dst>
+{
+    SetWord<Dst>(cpu, ReadWord<Dst>(cpu) - 1);
+    ++cpu.pc;
+}
+
+void RelativeJump(Cpu& cpu)
+{
+    int8_t e = cpu.ram[++cpu.pc];
+    auto new_pc = cpu.pc + e;
+    cpu.pc = new_pc;
+    ++cpu.pc;
+}
+
+void Noop(Cpu& cpu)
+{
+    ++cpu.pc;
+}
+
+void Stop(Cpu& cpu)
+{
+    cpu.ime = 0;
+    ++cpu.pc;
+}
+
+void RLCA(Cpu& cpu)
+{
+    cpu.reg.f &= ~(F::ALL);
+    uint8_t b7 = (cpu.reg.a >> 7) & 1;
+    if (b7)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    uint8_t value = cpu.reg.a << 1 | b7;
+    Set<R::A>(cpu, value);
+    ++cpu.pc;
+}
+
+void RLA(Cpu& cpu)
+{
+    bool c = cpu.reg.f & F::CARRY_FLAG;
+    cpu.reg.f &= ~(F::ALL);
+    uint8_t b7 = (cpu.reg.a >> 7) & 1;
+    if (b7)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    uint8_t value = cpu.reg.a << 1 | c;
+    Set<R::A>(cpu, value);
+    ++cpu.pc;
+}
+
+void RRCA(Cpu& cpu)
+{
+    cpu.reg.f &= ~(F::ALL);
+    uint8_t b0 = cpu.reg.a & 0x1;
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    uint8_t value = cpu.reg.a >> 1 | (b0 << 7);
+    Set<R::A>(cpu, value);
+    ++cpu.pc;
+}
+
+void RRA(Cpu& cpu)
+{
+    bool c = cpu.reg.f & F::CARRY_FLAG;
+    cpu.reg.f &= ~(F::ALL);
+    uint8_t b0 = cpu.reg.a & 1;
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    uint8_t value = cpu.reg.a >> 1 | (c << 7);
+    Set<R::A>(cpu, value);
+    ++cpu.pc;
 }
 
 } // namespace
 
 std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x0X
-    ::Noop, ::Load<R::BC, R::NN>, ::Load<R::BC, R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
     // 0x1X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Noop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
     // 0x2X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x3X
@@ -319,112 +323,4 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
 void CpuOperator::Execute(Cpu& cpu, uint8_t opcode)
 {
     s_Instructions[opcode](cpu);
-    // auto [inst, src, dst] = TranslateOpCode(opcode);
-    // Execute(cpu, inst, src, dst);
-}
-
-void CpuOperator::Execute(Cpu& cpu, Cpu::Instruction inst, Registers::Target src, Registers::Target dst)
-{
-    switch (inst)
-    {
-        case I::NOOP:
-            Noop(cpu);
-            break;
-        case I::INC:
-            Add(cpu, src, 1);
-            break;
-        case I::LOAD:
-            Load(cpu, src, dst);
-            break;
-        case I::ADD:
-            Add(cpu, R::A, cpu.ReadFromReg(src));
-            break;
-        default:
-            throw std::logic_error("Unsupported instruction");
-    }
-    return;
-    throw std::logic_error("Unsupported instruction");
-}
-
-// bool ShouldJump(const Registers& reg, Cpu::JumpTest test)
-// {
-//     switch (test)
-//     {
-//         case Cpu::JumpTest::NotZero:
-//             return !reg.HasFlag(Registers::Flags::ZERO_FLAG);
-//         case Cpu::JumpTest::Zero:
-//             return reg.HasFlag(Registers::Flags::ZERO_FLAG);
-//         case Cpu::JumpTest::NotCarry:
-//             return !reg.HasFlag(Registers::Flags::CARRY_FLAG);
-//         case Cpu::JumpTest::Carry:
-//             return reg.HasFlag(Registers::Flags::ZERO_FLAG);
-//         case Cpu::JumpTest::Always:
-//             return true;
-//     }
-// }
-//
-// uint8_t CpuOperator::Jump(Cpu::JumpTest test)
-// {
-//     bool shouldJump = ShouldJump(m_reg, test);
-//     if (!shouldJump)
-//     {
-//         return m_pc + 3;
-//     }
-//     // Gameboy is little endian, so m_pc + 2 is MSB.
-//     uint16_t msb = m_bus.ReadByte(m_pc + 2);
-//     uint16_t lsb = m_bus.ReadByte(m_pc + 1);
-//     return (msb << 8) | lsb;
-// }
-
-void CpuOperator::Add(Cpu& cpu, Registers::Target target, uint8_t value)
-{
-    uint8_t ori_value = cpu.reg.Get(target);
-    uint8_t new_value = ori_value + value;
-
-    cpu.reg.f &= !Registers::Flags::ALL;
-    if (new_value == 0)
-        cpu.reg.f |= Registers::Flags::ZERO_FLAG;
-
-    if ((ori_value & 0xF) + (value & 0xF) > 0xF)
-        cpu.reg.f |= Registers::Flags::HALF_CARRY_FLAG;
-
-    if (new_value < cpu.reg.a)
-        cpu.reg.f |=  Registers::Flags::CARRY_FLAG;
-
-    cpu.reg.Set(target, new_value);
-
-    ++cpu.pc;
-}
-
-void CpuOperator::Load(Cpu& cpu, Registers::Target source, Registers::Target target)
-{
-    if (source == Registers::Target::D8)
-    {
-        auto addr = cpu.pc + 1;
-        auto value = cpu.ram[addr];
-        cpu.reg.Set(target, value);
-        ++++cpu.pc;
-    }
-    else if (source == Registers::Target::HL)
-    {
-        auto addr = cpu.reg.GetDouble(Registers::Target::HL);
-        auto value = cpu.ram[addr];
-        cpu.reg.Set(target, value);
-        ++++cpu.pc;
-    }
-    else if (source >= Registers::Target::A && source <= Registers::Target::L)
-    {
-        cpu.reg.Set(target, cpu.reg.Get(source));
-        ++cpu.pc;
-    }
-    else 
-    {
-        throw std::runtime_error("LD: Unexpected target");
-    }
-}
-
-void CpuOperator::Noop(Cpu& cpu)
-{
-    ++cpu.pc;
-    return;
 }
