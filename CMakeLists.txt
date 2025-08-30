@@ -17,9 +17,6 @@ set(CMAKE_CXX_STANDARD_MINIMUM 20)
 # when compiling with PCH enabled
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(main
-    src/main.cpp
-    src/registers.cpp
-    src/cpu.cpp
-    src/cpu_instructions.cpp
-)
+include(Dependencies.cmake)
+
+add_subdirectory(src)
