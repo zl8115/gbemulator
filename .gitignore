@@ -43,6 +43,9 @@
 # Clangd Cache
 .cache/
 
+# CodeGen tests
+src/test/*.cpp
+
 # CMake
 build/
 CMakeLists.txt.user
