@@ -7,7 +7,7 @@ namespace {
 
 void Noop(Cpu& cpu)
 {
-    ++cpu.pc;
+    ++cpu.reg.pc;
 }
 
 } // namespace

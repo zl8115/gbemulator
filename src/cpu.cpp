@@ -10,6 +10,6 @@ void Cpu::Execute(uint8_t opcode)
 
 void Cpu::Step()
 {
-    auto opcode = ram[pc];
+    auto opcode = ram[reg.pc];
     Execute(opcode);
 }

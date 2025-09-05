@@ -9,8 +9,8 @@ struct std::formatter<Registers>: std::formatter<std::string>
     auto format(Registers reg, std::format_context& ctx) const
     {
         return formatter<string>::format(
-            std::format("A: {}, F:{}, B: {}, C:{}, D:{}, E:{}, H:{}, L:{}",
-                        reg.a, reg.f, reg.b, reg.c, reg.d, reg.e, reg.h, reg.l)
+            std::format("PC: {}, A: {}, F:{}, B: {}, C:{}, D:{}, E:{}, H:{}, L:{}",
+                        reg.pc, reg.a, reg.f, reg.b, reg.c, reg.d, reg.e, reg.h, reg.l)
             , ctx);
     }
 };
@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& os, Registers const& reg)
 
 std::ostream& operator<<(std::ostream& os, Cpu const& cpu)
 {
-    return os << std::format("PC: {}, Registers: {}", cpu.pc, cpu.reg);
+    return os << std::format("Registers: {}", cpu.reg);
 }
 
 int main()

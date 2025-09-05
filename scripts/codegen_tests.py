@@ -16,8 +16,8 @@ CPP_TEST_TEMPLATE = Template("""
 TEST_CASE( "$test_name", "$test_suite" ) {
     // Setup
     Cpu cpu;
-    cpu.pc = $pc;
-    // cpu.sp = $sp;
+    cpu.reg.pc = $pc;
+    cpu.reg.sp = $sp;
     cpu.reg.a = $a;
     cpu.reg.b = $b;
     cpu.reg.c = $c;
@@ -26,8 +26,8 @@ TEST_CASE( "$test_name", "$test_suite" ) {
     cpu.reg.f = $f;
     cpu.reg.h = $h;
     cpu.reg.l = $l;
-    // cpu.ime = $ime;
-    // cpu.ie = $ie;
+    // cpu.reg.ime = $ime;
+    // cpu.reg.ie = $ie;
 $ram_lines
 
     // Act
@@ -42,9 +42,9 @@ $ram_lines
     CHECK(cpu.reg.f == $e_f);
     CHECK(cpu.reg.h == $e_h);
     CHECK(cpu.reg.l == $e_l);
-    CHECK(cpu.pc == $e_pc);
-    // CHECK(cpu.sp == $e_sp);
-    // CHECK(cpu.ime == $e_ime);
+    CHECK(cpu.reg.pc == $e_pc);
+    // CHECK(cpu.reg.sp == $e_sp);
+    // CHECK(cpu.reg.ime == $e_ime);
 $expected_ram_lines
 }
 """)
