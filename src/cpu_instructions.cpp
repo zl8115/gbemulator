@@ -232,8 +232,22 @@ void Dec(Cpu& cpu) requires LargeReg<Dst>
     ++cpu.reg.pc;
 }
 
+void RelativeJump(Cpu& cpu)
+{
+    int8_t e = cpu.ram[++cpu.reg.pc];
+    auto new_pc = cpu.reg.pc + e;
+    cpu.reg.pc = new_pc;
+    ++cpu.reg.pc;
+}
+
 void Noop(Cpu& cpu)
 {
+    ++cpu.reg.pc;
+}
+
+void Stop(Cpu& cpu)
+{
+    cpu.ime = 0;
     ++cpu.reg.pc;
 }
 
@@ -301,7 +315,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x0X
     ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
     // 0x1X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Noop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
     // 0x2X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x3X

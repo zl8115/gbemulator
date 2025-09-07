@@ -1,6 +1,7 @@
 import os
 import pathlib
 import json
+import re
 from string import Template
 
 # https://github.com/SingleStepTests/sm83
@@ -16,6 +17,7 @@ CPP_TEST_TEMPLATE = Template("""
 TEST_CASE( "$test_name", "$test_suite" ) {
     // Setup
     Cpu cpu;
+    cpu.ime = $ime;
     cpu.reg.pc = $pc;
     cpu.reg.sp = $sp;
     cpu.reg.a = $a;
@@ -26,14 +28,13 @@ TEST_CASE( "$test_name", "$test_suite" ) {
     cpu.reg.f = $f;
     cpu.reg.h = $h;
     cpu.reg.l = $l;
-    // cpu.reg.ime = $ime;
-    // cpu.reg.ie = $ie;
 $ram_lines
 
     // Act
     cpu.Step();
 
     // Assert
+    CHECK(cpu.ime == $e_ime);
     CHECK(cpu.reg.a == $e_a);
     CHECK(cpu.reg.b == $e_b);
     CHECK(cpu.reg.c == $e_c);
@@ -43,13 +44,13 @@ $ram_lines
     CHECK(cpu.reg.h == $e_h);
     CHECK(cpu.reg.l == $e_l);
     CHECK(cpu.reg.pc == $e_pc);
-    // CHECK(cpu.reg.sp == $e_sp);
-    // CHECK(cpu.reg.ime == $e_ime);
+    CHECK(cpu.reg.sp == $e_sp);
 $expected_ram_lines
 }
 """)
 
-for test_file in pathlib.Path(TEST_DIR).glob("0*.json"):
+test_files = filter(lambda p: re.search(r'^(0|1)[0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
+for test_file in test_files:
     test_json = json.loads(test_file.read_text());
     out_file_name = test_file.stem + ".cpp"
     out_dir = pathlib.Path(__file__).parent.parent / "src" / "test"
