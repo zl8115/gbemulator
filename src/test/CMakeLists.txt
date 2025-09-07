@@ -8,6 +8,10 @@ add_executable(tests
 target_link_libraries(
     tests
     PRIVATE Catch2::Catch2WithMain)
+target_precompile_headers(
+    tests
+    PRIVATE $<BUILD_INTERFACE:${Catch2_SOURCE_DIR}/src/catch2/catch_test_macros.hpp>
+)
 target_include_directories(
     tests
     PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
