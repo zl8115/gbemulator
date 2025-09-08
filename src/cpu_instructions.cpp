@@ -440,7 +440,8 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x3X
     ::RelativeJump<C::NC>, ::Load<R::SP,R::NN>, ::Load<R::HLD,R::A>, ::Inc<R::SP>, ::Inc<R::IHL>, ::Dec<R::IHL>, ::Load<R::HL,R::N>, ::SCF, ::RelativeJump<C::C>, ::Add<R::HL,R::SP>, ::Load<R::A,R::HLD>, ::Dec<R::SP>, ::Inc<R::A>, ::Dec<R::A>, ::Load<R::A,R::N>, ::CCF,
     // 0x4X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Load<R::B,R::B>, ::Load<R::B,R::C>, ::Load<R::B,R::D>, ::Load<R::B,R::E>, ::Load<R::B,R::H>, ::Load<R::B,R::L>, ::Load<R::B,R::IHL>, ::Load<R::B,R::A>, ::Load<R::C,R::B>, ::Load<R::C,R::C>, ::Load<R::C,R::D>, ::Load<R::C,R::E>, ::Load<R::C,R::H>, ::Load<R::C,R::L>, ::Load<R::C,R::IHL>, ::Load<R::C,R::A>
+,
     // 0x5X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x6X
