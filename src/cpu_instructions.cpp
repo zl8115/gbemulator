@@ -242,19 +242,19 @@ void Add(Cpu& cpu, uint16_t value) requires LargeReg<Dst>
 }
 
 template <R Dst, R Src>
-void Add(Cpu& cpu) requires SmallReg<Dst>
+void Add(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
 {
     Add<Dst>(cpu, Read<Src>(cpu));
 }
 
 template <R Dst, R Src>
-void Add(Cpu& cpu) requires LargeReg<Dst>
+void Add(Cpu& cpu) requires LargeReg<Dst> && LargeReg<Src>
 {
     Add<Dst>(cpu, ReadWord<Src>(cpu));
 }
 
 template <R Dst, R Src>
-void Adc(Cpu& cpu) requires SmallReg<Dst>
+void Adc(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
 {
     uint8_t carry = (cpu.reg.f & F::CARRY_FLAG) ? 1 : 0;
     uint8_t value = Read<Src>(cpu);
@@ -278,14 +278,15 @@ void Adc(Cpu& cpu) requires SmallReg<Dst>
 template <R Dst>
 void Inc(Cpu& cpu) requires SmallReg<Dst>
 {
+    constexpr uint8_t value = 1;
     uint8_t ori_value = Read<Dst>(cpu);
-    uint8_t new_value = ori_value + 1;
+    uint8_t new_value = ori_value + value;
 
     cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
     if (new_value == 0)
         cpu.reg.f |= F::ZERO_FLAG;
 
-    if ((ori_value & 0xF) + 1 > 0xF)
+    if ((ori_value & 0xF) + value > 0xF)
         cpu.reg.f |= F::HALF_CARRY_FLAG;
 
     Set<Dst>(cpu, new_value);
@@ -305,6 +306,57 @@ void Sub(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
     uint8_t ori_value = Read<Dst>(cpu);
     uint8_t new_value = ori_value - value;
 
+    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    cpu.reg.f |= F::NEGATE_FLAG;
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+
+    if ((ori_value & 0xF) < (value & 0xF))
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (ori_value < new_value)
+        cpu.reg.f |= F::CARRY_FLAG;
+
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
+template <R Dst, R Src>
+void Sub(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    Sub<Dst>(cpu, Read<Src>(cpu));
+}
+
+template <R Dst, R Src>
+void Sbc(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    uint8_t value = Read<Src>(cpu);
+    uint8_t carry = (cpu.reg.f & F::CARRY_FLAG) ? 1 : 0;
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value - value - carry;
+
+    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    cpu.reg.f |= F::NEGATE_FLAG;
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+
+    if ((ori_value & 0xF) < (value & 0xF) + carry)
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (ori_value < new_value + carry)
+        cpu.reg.f |= F::CARRY_FLAG;
+
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
+template <R Dst>
+void Dec(Cpu& cpu) requires SmallReg<Dst>
+{
+    constexpr uint8_t value = 1;
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value - value;
+
     cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG);
     cpu.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
@@ -315,12 +367,6 @@ void Sub(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
 
     Set<Dst>(cpu, new_value);
     ++cpu.reg.pc;
-}
-
-template <R Dst>
-void Dec(Cpu& cpu) requires SmallReg<Dst>
-{
-    Sub<Dst>(cpu, 1);
 }
 
 template <R Dst>
@@ -495,7 +541,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x8X
     ::Add<R::A,R::B>, ::Add<R::A,R::C>, ::Add<R::A,R::D>, ::Add<R::A,R::E>, ::Add<R::A,R::H>, ::Add<R::A,R::L>, ::Add<R::A,R::IHL>, ::Add<R::A,R::A>, ::Adc<R::A,R::B>, ::Adc<R::A,R::C>, ::Adc<R::A,R::D>, ::Adc<R::A,R::E>, ::Adc<R::A,R::H>, ::Adc<R::A,R::L>, ::Adc<R::A,R::IHL>, ::Adc<R::A,R::A>,
     // 0x9X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Sub<R::A,R::B>, ::Sub<R::A,R::C>, ::Sub<R::A,R::D>, ::Sub<R::A,R::E>, ::Sub<R::A,R::H>, ::Sub<R::A,R::L>, ::Sub<R::A,R::IHL>, ::Sub<R::A,R::A>, ::Sbc<R::A,R::B>, ::Sbc<R::A,R::C>, ::Sbc<R::A,R::D>, ::Sbc<R::A,R::E>, ::Sbc<R::A,R::H>, ::Sbc<R::A,R::L>, ::Sbc<R::A,R::IHL>, ::Sbc<R::A,R::A>,
     // 0xaX
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xbX
