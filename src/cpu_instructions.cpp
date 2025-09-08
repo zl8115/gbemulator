@@ -444,7 +444,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x5X
     ::Load<R::D,R::B>, ::Load<R::D,R::C>, ::Load<R::D,R::D>, ::Load<R::D,R::E>, ::Load<R::D,R::H>, ::Load<R::D,R::L>, ::Load<R::D,R::IHL>, ::Load<R::D,R::A>, ::Load<R::E,R::B>, ::Load<R::E,R::C>, ::Load<R::E,R::D>, ::Load<R::E,R::E>, ::Load<R::E,R::H>, ::Load<R::E,R::L>, ::Load<R::E,R::IHL>, ::Load<R::E,R::A>,
     // 0x6X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Load<R::H,R::B>, ::Load<R::H,R::C>, ::Load<R::H,R::D>, ::Load<R::H,R::E>, ::Load<R::H,R::H>, ::Load<R::H,R::L>, ::Load<R::H,R::IHL>, ::Load<R::H,R::A>, ::Load<R::L,R::B>, ::Load<R::L,R::C>, ::Load<R::L,R::D>, ::Load<R::L,R::E>, ::Load<R::L,R::H>, ::Load<R::L,R::L>, ::Load<R::L,R::IHL>, ::Load<R::L,R::A>,
     // 0x7X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x8X
