@@ -18,8 +18,6 @@ TEST_CASE( "$test_name", "$test_suite" ) {
     // Setup
     Cpu cpu;
     cpu.ime = $ime;
-    cpu.reg.pc = $pc;
-    cpu.reg.sp = $sp;
     cpu.reg.a = $a;
     cpu.reg.b = $b;
     cpu.reg.c = $c;
@@ -28,6 +26,8 @@ TEST_CASE( "$test_name", "$test_suite" ) {
     cpu.reg.f = $f;
     cpu.reg.h = $h;
     cpu.reg.l = $l;
+    cpu.reg.pc = $pc;
+    cpu.reg.sp = $sp;
 $ram_lines
 
     // Act
@@ -49,7 +49,7 @@ $expected_ram_lines
 }
 """)
 
-test_files = filter(lambda p: re.search(r'^(0|1)[0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
+test_files = filter(lambda p: re.search(r'^[0-2][0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
 for test_file in test_files:
     test_json = json.loads(test_file.read_text());
     out_file_name = test_file.stem + ".cpp"
