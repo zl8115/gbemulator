@@ -388,6 +388,35 @@ void RelativeJump(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+template <R Dst, R Src>
+void And(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    uint8_t value = Read<Src>(cpu);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value & value;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::CARRY_FLAG);
+    cpu.reg.f |= F::HALF_CARRY_FLAG;
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
+template <R Dst, R Src>
+void Xor(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    uint8_t value = Read<Src>(cpu);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value ^ value;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
 void Noop(Cpu& cpu)
 {
     ++cpu.reg.pc;
@@ -543,7 +572,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x9X
     ::Sub<R::A,R::B>, ::Sub<R::A,R::C>, ::Sub<R::A,R::D>, ::Sub<R::A,R::E>, ::Sub<R::A,R::H>, ::Sub<R::A,R::L>, ::Sub<R::A,R::IHL>, ::Sub<R::A,R::A>, ::Sbc<R::A,R::B>, ::Sbc<R::A,R::C>, ::Sbc<R::A,R::D>, ::Sbc<R::A,R::E>, ::Sbc<R::A,R::H>, ::Sbc<R::A,R::L>, ::Sbc<R::A,R::IHL>, ::Sbc<R::A,R::A>,
     // 0xaX
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::And<R::A,R::B>, ::And<R::A,R::C>, ::And<R::A,R::D>, ::And<R::A,R::E>, ::And<R::A,R::H>, ::And<R::A,R::L>, ::And<R::A,R::IHL>, ::And<R::A,R::A>, ::Xor<R::A,R::B>, ::Xor<R::A,R::C>, ::Xor<R::A,R::D>, ::Xor<R::A,R::E>, ::Xor<R::A,R::H>, ::Xor<R::A,R::L>, ::Xor<R::A,R::IHL>, ::Xor<R::A,R::A>,
     // 0xbX
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xcX
