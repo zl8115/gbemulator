@@ -14,6 +14,7 @@ add_executable(tests
     90.cpp 91.cpp 92.cpp 93.cpp 94.cpp 95.cpp 96.cpp 97.cpp 98.cpp 99.cpp 9a.cpp 9b.cpp 9c.cpp 9d.cpp 9e.cpp 9f.cpp
     a0.cpp a1.cpp a2.cpp a3.cpp a4.cpp a5.cpp a6.cpp a7.cpp a8.cpp a9.cpp aa.cpp ab.cpp ac.cpp ad.cpp ae.cpp af.cpp
     b0.cpp b1.cpp b2.cpp b3.cpp b4.cpp b5.cpp b6.cpp b7.cpp b8.cpp b9.cpp ba.cpp bb.cpp bc.cpp bd.cpp be.cpp bf.cpp
+    c0.cpp c1.cpp c2.cpp c3.cpp c4.cpp c5.cpp c6.cpp c7.cpp c8.cpp c9.cpp ca.cpp        cc.cpp cd.cpp ce.cpp cf.cpp
 )
 target_link_libraries(
     tests

@@ -141,6 +141,7 @@ template <> inline bool ConditionCheck<C::Z>(Cpu& cpu) { return cpu.reg.f & F::Z
 template <> inline bool ConditionCheck<C::C>(Cpu& cpu) { return cpu.reg.f & F::CARRY_FLAG; }
 
 /******************** Cpu Instructions ********************/
+/*     ************** Registry Ops *************     */
 
 template <R Dst, R Src>
 void Load(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
@@ -376,18 +377,6 @@ void Dec(Cpu& cpu) requires LargeReg<Dst>
     ++cpu.reg.pc;
 }
 
-template <C Cnd>
-void RelativeJump(Cpu& cpu)
-{
-    int8_t e = cpu.ram[++cpu.reg.pc];
-    if (ConditionCheck<Cnd>(cpu))
-    {
-        auto new_pc = cpu.reg.pc + e;
-        cpu.reg.pc = new_pc;
-    }
-    ++cpu.reg.pc;
-}
-
 template <R Dst, R Src>
 void And(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
 {
@@ -451,6 +440,87 @@ void Cp(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
     ++cpu.reg.pc;
 }
 
+template <R Dst>
+void Pop(Cpu& cpu) requires LargeReg<Dst>
+{
+    auto lobyte = cpu.ram[cpu.reg.sp++];
+    auto hibyte = cpu.ram[cpu.reg.sp++];
+    SetWord<Dst>(cpu, ToWord(hibyte, lobyte));
+    ++cpu.reg.pc;
+}
+
+template <R Dst>
+void Push(Cpu& cpu) requires LargeReg<Dst>
+{
+    auto data = ReadWord<Dst>(cpu);
+    cpu.ram[--cpu.reg.sp] = Msb(data);
+    cpu.ram[--cpu.reg.sp] = Lsb(data);
+    ++cpu.reg.pc;
+}
+
+/*     ************** Conditional Ops *************     */
+template <C Cnd>
+void RelativeJump(Cpu& cpu)
+{
+    int8_t e = cpu.ram[++cpu.reg.pc];
+    if (ConditionCheck<Cnd>(cpu))
+    {
+        auto new_pc = cpu.reg.pc + e;
+        cpu.reg.pc = new_pc;
+    }
+    ++cpu.reg.pc;
+}
+
+template <C Cnd>
+void Jump(Cpu& cpu)
+{
+    auto lobyte = cpu.ram[++cpu.reg.pc];
+    auto hibyte = cpu.ram[++cpu.reg.pc];
+    ++cpu.reg.pc;
+    if (ConditionCheck<Cnd>(cpu))
+    {
+        cpu.reg.pc = ToWord(hibyte,lobyte);
+    }
+}
+
+template <C Cnd>
+void Call(Cpu& cpu)
+{
+    auto lobyte = cpu.ram[++cpu.reg.pc];
+    auto hibyte = cpu.ram[++cpu.reg.pc];
+    ++cpu.reg.pc;
+    if (ConditionCheck<Cnd>(cpu))
+    {
+        auto nn = ToWord(hibyte, lobyte);
+        cpu.ram[--cpu.reg.sp] = Msb(cpu.reg.pc);
+        cpu.ram[--cpu.reg.sp] = Lsb(cpu.reg.pc);
+        cpu.reg.pc = nn;
+    }
+}
+
+template <C Cnd>
+void Ret(Cpu& cpu)
+{
+    ++cpu.reg.pc;
+    if (ConditionCheck<Cnd>(cpu))
+    {
+        auto lobyte = cpu.ram[cpu.reg.sp++];
+        auto hibyte = cpu.ram[cpu.reg.sp++];
+        cpu.reg.pc = ToWord(hibyte, lobyte);
+    }
+}
+
+/*     ************** Opcode Ops *************     */
+template <uint8_t Op>
+void Rst(Cpu& cpu)
+{
+    ++cpu.reg.pc;
+    cpu.ram[--cpu.reg.sp] = Msb(cpu.reg.pc);
+    cpu.ram[--cpu.reg.sp] = Lsb(cpu.reg.pc);
+    cpu.reg.pc = Op;
+}
+
+/*     ************** Normal Ops *************     */
 void Noop(Cpu& cpu)
 {
     ++cpu.reg.pc;
@@ -610,7 +680,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0xbX
     ::Or<R::A,R::B>, ::Or<R::A,R::C>, ::Or<R::A,R::D>, ::Or<R::A,R::E>, ::Or<R::A,R::H>, ::Or<R::A,R::L>, ::Or<R::A,R::IHL>, ::Or<R::A,R::A>, ::Cp<R::A,R::B>, ::Cp<R::A,R::C>, ::Cp<R::A,R::D>, ::Cp<R::A,R::E>, ::Cp<R::A,R::H>, ::Cp<R::A,R::L>, ::Cp<R::A,R::IHL>, ::Cp<R::A,R::A>,
     // 0xcX
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Ret<C::NZ>, ::Pop<R::BC>, ::Jump<C::NZ>, ::Jump<C::NONE>, ::Call<C::NZ>, ::Push<R::BC>, ::Add<R::A,R::N>, ::Rst<0x00>, ::Ret<C::Z>, ::Ret<C::NONE>, ::Jump<C::Z>, ::Noop /* TODO */, ::Call<C::Z>, ::Call<C::NONE>, ::Adc<R::A,R::N>, ::Rst<0x08>,
     // 0xdX
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xeX
