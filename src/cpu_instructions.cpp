@@ -417,6 +417,40 @@ void Xor(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
     ++cpu.reg.pc;
 }
 
+template <R Dst, R Src>
+void Or(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    uint8_t value = Read<Src>(cpu);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value | value;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
+template <R Dst, R Src>
+void Cp(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+{
+    uint8_t value = Read<Src>(cpu);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value - value;
+
+    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    cpu.reg.f |= F::NEGATE_FLAG;
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+
+    if ((ori_value & 0xF) < (value & 0xF))
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (ori_value < new_value)
+        cpu.reg.f |= F::CARRY_FLAG;
+    ++cpu.reg.pc;
+}
+
 void Noop(Cpu& cpu)
 {
     ++cpu.reg.pc;
@@ -574,7 +608,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0xaX
     ::And<R::A,R::B>, ::And<R::A,R::C>, ::And<R::A,R::D>, ::And<R::A,R::E>, ::And<R::A,R::H>, ::And<R::A,R::L>, ::And<R::A,R::IHL>, ::And<R::A,R::A>, ::Xor<R::A,R::B>, ::Xor<R::A,R::C>, ::Xor<R::A,R::D>, ::Xor<R::A,R::E>, ::Xor<R::A,R::H>, ::Xor<R::A,R::L>, ::Xor<R::A,R::IHL>, ::Xor<R::A,R::A>,
     // 0xbX
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Or<R::A,R::B>, ::Or<R::A,R::C>, ::Or<R::A,R::D>, ::Or<R::A,R::E>, ::Or<R::A,R::H>, ::Or<R::A,R::L>, ::Or<R::A,R::IHL>, ::Or<R::A,R::A>, ::Cp<R::A,R::B>, ::Cp<R::A,R::C>, ::Cp<R::A,R::D>, ::Cp<R::A,R::E>, ::Cp<R::A,R::H>, ::Cp<R::A,R::L>, ::Cp<R::A,R::IHL>, ::Cp<R::A,R::A>,
     // 0xcX
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xdX
