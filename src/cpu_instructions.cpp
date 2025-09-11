@@ -3,6 +3,13 @@
 
 #include <functional>
 
+enum class ConditionFlags
+{
+    NONE = 0,
+    NZ, NC,
+    Z, C
+};
+
 enum class RegisterTargets
 {
     INVALID = -1,
@@ -13,6 +20,9 @@ enum class RegisterTargets
 
     // Large Registers
     BC, DE, HL, SP,
+
+    // Inc/Dec Large Registers
+    HLI, HLD,
 
     // Indirect Registers
     N, NN
@@ -29,6 +39,7 @@ enum RegisterFlags : uint8_t
 
 using R = RegisterTargets;
 using F = RegisterFlags;
+using C = ConditionFlags;
 
 template<R T>
 concept SmallReg = T == R::A || T == R::B || T == R::C || T == R::D ||
@@ -39,6 +50,9 @@ concept LargeReg = T == R::BC || T == R::DE || T == R::HL || T == R::SP || T == 
 
 template <R T>
 concept RegTarget = (SmallReg<T> || LargeReg<T>);
+
+template <R T>
+concept IncDecReg = T == R::HLI || T == R::HLD;
 
 /******************** Utility Functions ********************/
 
@@ -60,6 +74,8 @@ inline uint8_t Msb(uint16_t word)
 namespace {
 
 /******************** Basic Memory Bus Functions ********************/
+
+inline uint8_t ReadFlags(Cpu& cpu) { return cpu.reg.f; }
 
 template <R Src>
 inline uint8_t Read(Cpu& cpu) requires SmallReg<Src>;
@@ -106,6 +122,16 @@ template <> inline void SetWord<R::NN>(Cpu& cpu, uint16_t value) {
     cpu.ram[++nn] = Msb(value);
 }
 
+/******************** Condition Check Functions ********************/
+
+template <C Cnd>
+inline bool ConditionCheck(Cpu& cpu);
+template <> inline bool ConditionCheck<C::NONE>(Cpu& cpu) { return true; }
+template <> inline bool ConditionCheck<C::NZ>(Cpu& cpu) { return !(cpu.reg.f & F::ZERO_FLAG); }
+template <> inline bool ConditionCheck<C::NC>(Cpu& cpu) { return !(cpu.reg.f & F::CARRY_FLAG); }
+template <> inline bool ConditionCheck<C::Z>(Cpu& cpu) { return cpu.reg.f & F::ZERO_FLAG; }
+template <> inline bool ConditionCheck<C::C>(Cpu& cpu) { return cpu.reg.f & F::CARRY_FLAG; }
+
 /******************** Cpu Instructions ********************/
 
 template <R Dst, R Src>
@@ -137,6 +163,34 @@ void Load(Cpu& cpu) requires LargeReg<Dst> && SmallReg<Src>
     auto addr = ReadWord<Dst>(cpu);
     cpu.ram[addr] = Read<Src>(cpu);
     ++cpu.reg.pc;
+}
+
+template <R Dst, R Src>
+void Load(Cpu& cpu) requires IncDecReg<Dst> && SmallReg<Src>
+{
+    Load<R::HL, Src>(cpu);
+    if constexpr(Dst == R::HLI)
+    {
+        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) + 1);
+    }
+    else if constexpr(Dst == R::HLD)
+    {
+        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) - 1);
+    }
+}
+
+template <R Dst, R Src>
+void Load(Cpu& cpu) requires SmallReg<Dst> && IncDecReg<Src>
+{
+    Load<Dst, R::HL>(cpu);
+    if constexpr(Src == R::HLI)
+    {
+        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) + 1);
+    }
+    else if constexpr(Src == R::HLD)
+    {
+        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) - 1);
+    }
 }
 
 template <R Dst>
@@ -232,11 +286,15 @@ void Dec(Cpu& cpu) requires LargeReg<Dst>
     ++cpu.reg.pc;
 }
 
+template <C Cnd>
 void RelativeJump(Cpu& cpu)
 {
     int8_t e = cpu.ram[++cpu.reg.pc];
-    auto new_pc = cpu.reg.pc + e;
-    cpu.reg.pc = new_pc;
+    if (ConditionCheck<Cnd>(cpu))
+    {
+        auto new_pc = cpu.reg.pc + e;
+        cpu.reg.pc = new_pc;
+    }
     ++cpu.reg.pc;
 }
 
@@ -309,15 +367,54 @@ void RRA(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+void DAA(Cpu& cpu)
+{
+    uint8_t ori_value = Read<R::A>(cpu);
+    uint8_t ori_flags = ReadFlags(cpu);
+    bool isNegate = ori_flags & F::NEGATE_FLAG;
+    bool isHalfCarry = ori_flags & F::HALF_CARRY_FLAG;
+    bool isCarry = ori_flags & F::CARRY_FLAG;
+
+    bool shouldCarry = false;
+    uint8_t offset = 0;
+    if ((!isNegate && ((ori_value & 0xF) > 0x09)) || isHalfCarry)
+    {
+        offset |= 0x06;
+    }
+
+    if ((!isNegate && (ori_value > 0x99)) || isCarry)
+    {
+        offset |= 0x60;
+        shouldCarry = true;
+    }
+
+    uint8_t new_value = isNegate ? ori_value - offset : ori_value + offset;
+    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+    if (shouldCarry)
+        cpu.reg.f |= F::CARRY_FLAG;
+    Set<R::A>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
+void CPL(Cpu& cpu)
+{
+    Set<R::A>(cpu, ~Read<R::A>(cpu));
+    cpu.reg.f |= F::NEGATE_FLAG;
+    cpu.reg.f |= F::HALF_CARRY_FLAG;
+    ++cpu.reg.pc;
+}
+
 } // namespace
 
 std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x0X
     ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
     // 0x1X
-    ::Noop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
+    ::Noop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump<C::NONE>, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
     // 0x2X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::RelativeJump<C::NZ>, ::Load<R::HL,R::NN>, ::Load<R::HLI,R::A>, ::Inc<R::HL>, ::Inc<R::H>, ::Dec<R::H>, ::Load<R::H,R::N>, ::DAA, ::RelativeJump<C::Z>, ::Add<R::HL,R::HL>, ::Load<R::A,R::HLI>, ::Dec<R::HL>, ::Inc<R::L>, ::Dec<R::L>, ::Load<R::L,R::N>, ::CPL,
     // 0x3X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x4X
