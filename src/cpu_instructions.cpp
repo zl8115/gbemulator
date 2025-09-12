@@ -2,6 +2,7 @@
 #include "cpu_instructions.h"
 
 #include <functional>
+#include <stdexcept>
 
 enum class ConditionFlags
 {
@@ -521,6 +522,11 @@ void Rst(Cpu& cpu)
 }
 
 /*     ************** Normal Ops *************     */
+void Undef(Cpu& cpu)
+{
+    throw std::runtime_error("Undefined opcode");
+}
+
 void Noop(Cpu& cpu)
 {
     ++cpu.reg.pc;
@@ -652,6 +658,14 @@ void CCF(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+void RetI(Cpu& cpu)
+{
+    auto Z = cpu.ram[cpu.reg.sp++];
+    auto W = cpu.ram[cpu.reg.sp++];
+    cpu.reg.pc = ToWord(W,Z);
+    cpu.ime = 1;
+}
+
 } // namespace
 
 std::function<void(Cpu&)> s_Instructions[0x100] = {
@@ -682,7 +696,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0xcX
     ::Ret<C::NZ>, ::Pop<R::BC>, ::Jump<C::NZ>, ::Jump<C::NONE>, ::Call<C::NZ>, ::Push<R::BC>, ::Add<R::A,R::N>, ::Rst<0x00>, ::Ret<C::Z>, ::Ret<C::NONE>, ::Jump<C::Z>, ::Noop /* TODO */, ::Call<C::Z>, ::Call<C::NONE>, ::Adc<R::A,R::N>, ::Rst<0x08>,
     // 0xdX
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Ret<C::NC>, ::Pop<R::DE>, ::Jump<C::NC>, ::Undef, ::Call<C::NC>, ::Push<R::DE>, ::Sub<R::A,R::N>, ::Rst<0x10>, ::Ret<C::C>, ::RetI, ::Jump<C::C>, ::Undef, ::Call<C::C>, ::Undef, ::Sbc<R::A,R::N>, ::Rst<0x18>,
     // 0xeX
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xfX
