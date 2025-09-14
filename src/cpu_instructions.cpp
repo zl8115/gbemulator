@@ -17,16 +17,16 @@ enum class RegisterTargets
     NONE = 0,
 
     // Single Registers
-    A, B, C, D, E, H, L,
+    A, F, B, C, D, E, H, L,
 
     // Large Registers
-    BC, DE, HL, SP,
+    AF, BC, DE, HL, SP,
 
     // Inc/Dec Large Registers
     HLI, HLD,
 
     // Indirect Registers
-    N, NN, IHL, Ne
+    N, NN, IHL, Ne, SPe
 };
 
 enum RegisterFlags : uint8_t
@@ -43,11 +43,11 @@ using F = RegisterFlags;
 using C = ConditionFlags;
 
 template<R T>
-concept SmallReg = T == R::A || T == R::B || T == R::C || T == R::D || T == R::E || T == R::H || T == R::L ||
+concept SmallReg = T == R::A || T == R::F || T == R::B || T == R::C || T == R::D || T == R::E || T == R::H || T == R::L ||
     T == R::N || T == R::IHL;
 
 template <R T>
-concept LargeReg = T == R::BC || T == R::DE || T == R::HL || T == R::SP ||
+concept LargeReg = T == R::BC || T == R::DE || T == R::HL || T == R::SP || T == R::AF ||
     T == R::NN;
 
 template<R T>
@@ -89,6 +89,7 @@ template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu);
 template <R Src>
 inline uint8_t Read(Cpu& cpu) requires SmallReg<Src>;
 template <> inline uint8_t Read<R::A>(Cpu& cpu) { return cpu.reg.a; }
+template <> inline uint8_t Read<R::F>(Cpu& cpu) { return cpu.reg.f; }
 template <> inline uint8_t Read<R::B>(Cpu& cpu) { return cpu.reg.b; }
 template <> inline uint8_t Read<R::C>(Cpu& cpu) { return cpu.reg.c; }
 template <> inline uint8_t Read<R::D>(Cpu& cpu) { return cpu.reg.d; }
@@ -98,6 +99,7 @@ template <> inline uint8_t Read<R::L>(Cpu& cpu) { return cpu.reg.l; }
 template <> inline uint8_t Read<R::N>(Cpu& cpu) { return cpu.ram[++cpu.reg.pc]; }
 template <> inline uint8_t Read<R::IHL>(Cpu& cpu) { return cpu.ram[ReadWord<R::HL>(cpu)]; }
 
+template <> inline uint16_t ReadWord<R::AF>(Cpu& cpu) { return ToWord(Read<R::A>(cpu), Read<R::F>(cpu)); }
 template <> inline uint16_t ReadWord<R::BC>(Cpu& cpu) { return ToWord(Read<R::B>(cpu), Read<R::C>(cpu)); }
 template <> inline uint16_t ReadWord<R::DE>(Cpu& cpu) { return ToWord(Read<R::D>(cpu), Read<R::E>(cpu)); }
 template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu) { return ToWord(Read<R::H>(cpu), Read<R::L>(cpu)); }
@@ -117,6 +119,7 @@ template <> inline uint16_t ReadH<R::C>(Cpu& cpu) { return cpu.ram[ToWord(0xFF, 
 template <R Dst>
 inline void Set(Cpu& cpu, uint8_t value) requires SmallReg<Dst>;
 template <> inline void Set<R::A>(Cpu& cpu, uint8_t value) { cpu.reg.a = value; }
+template <> inline void Set<R::F>(Cpu& cpu, uint8_t value) { cpu.reg.f = value & F::ALL; }
 template <> inline void Set<R::B>(Cpu& cpu, uint8_t value) { cpu.reg.b = value; }
 template <> inline void Set<R::C>(Cpu& cpu, uint8_t value) { cpu.reg.c = value; }
 template <> inline void Set<R::D>(Cpu& cpu, uint8_t value) { cpu.reg.d = value; }
@@ -127,6 +130,7 @@ template <> inline void Set<R::IHL>(Cpu& cpu, uint8_t value) { cpu.ram[ReadWord<
 
 template <R Dst>
 inline void SetWord(Cpu& cpu, uint16_t value) requires LargeReg<Dst>;
+template <> inline void SetWord<R::AF>(Cpu& cpu, uint16_t value) { Set<R::A>(cpu, Msb(value)); Set<R::F>(cpu, Lsb(value)); }
 template <> inline void SetWord<R::BC>(Cpu& cpu, uint16_t value) { Set<R::B>(cpu, Msb(value)); Set<R::C>(cpu, Lsb(value)); }
 template <> inline void SetWord<R::DE>(Cpu& cpu, uint16_t value) { Set<R::D>(cpu, Msb(value)); Set<R::E>(cpu, Lsb(value)); }
 template <> inline void SetWord<R::HL>(Cpu& cpu, uint16_t value) { Set<R::H>(cpu, Msb(value)); Set<R::L>(cpu, Lsb(value)); }
@@ -213,6 +217,22 @@ void Load(Cpu& cpu) requires SmallReg<Dst> && IncDecReg<Src>
     {
         SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) - 1);
     }
+}
+
+template <R Dst, R Src>
+void Load(Cpu& cpu) requires (Dst == R::HL && Src == R::SPe)
+{
+    auto e = static_cast<int16_t>(static_cast<int8_t>(Read<R::N>(cpu)));
+    uint16_t ori_value = cpu.reg.sp;
+    uint16_t new_value = ori_value + e;
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    if (((ori_value & 0xF) + (e & 0xF)) & 0x10)
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (((ori_value & 0xFF) + (e & 0xFF)) & 0x100)
+        cpu.reg.f |= F::CARRY_FLAG;
+    SetWord<R::HL>(cpu, new_value);
+    ++cpu.reg.pc;
 }
 
 template <R Dst, R Src>
@@ -707,6 +727,19 @@ void RetI(Cpu& cpu)
     cpu.ime = 1;
 }
 
+void DisI(Cpu& cpu)
+{
+    cpu.ime = 0;
+    ++cpu.reg.pc;
+}
+
+void EnaI(Cpu& cpu)
+{
+    // TODO: Properly implement
+    cpu.ei = 1;
+    ++cpu.reg.pc;
+}
+
 } // namespace
 
 std::function<void(Cpu&)> s_Instructions[0x100] = {
@@ -741,7 +774,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0xeX
     ::LoadH<R::N,R::A>, ::Pop<R::HL>, ::LoadH<R::C,R::A>, ::Undef, ::Undef, ::Push<R::HL>, ::And<R::A,R::N>, ::Rst<0x20>, ::Add<R::SP,R::Ne>, ::Jump<R::HL>, ::Load<R::NN,R::A>, ::Undef, ::Undef, ::Undef, ::Xor<R::A,R::N>, ::Rst<0x28>,
     // 0xfX
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::LoadH<R::A,R::N>, ::Pop<R::AF>, ::LoadH<R::A,R::C>, ::DisI, ::Undef, ::Push<R::AF>, ::Or<R::A,R::N>, ::Rst<0x30>, ::Load<R::HL,R::SPe>, ::Load<R::SP,R::HL>, ::Load<R::A,R::NN>, ::EnaI, ::Undef, ::Undef, ::Cp<R::A,R::N>, ::Rst<0x38>,
 };
 
 void CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)

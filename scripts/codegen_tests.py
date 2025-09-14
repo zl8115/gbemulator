@@ -19,6 +19,7 @@ TEST_CASE( "$test_name", "$test_suite" ) {
     // Setup
     Cpu cpu;
     cpu.ime = $ime;
+    // cpu.ie = $ie;
     cpu.reg.a = $a;
     cpu.reg.b = $b;
     cpu.reg.c = $c;
@@ -36,6 +37,7 @@ $ram_lines
 
     // Assert
     CHECK(cpu.ime == $e_ime);
+    CHECK(cpu.ei == $e_ei);
     CHECK(cpu.reg.a == $e_a);
     CHECK(cpu.reg.b == $e_b);
     CHECK(cpu.reg.c == $e_c);
@@ -50,7 +52,7 @@ $expected_ram_lines
 }
 """)
 
-test_files = filter(lambda p: re.search(r'^[0-9a-e][0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
+test_files = filter(lambda p: re.search(r'^[0-9a-f][0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
 for test_file in test_files:
     test_json = json.loads(test_file.read_text());
     out_file_name = test_file.stem + ".cpp"
@@ -88,6 +90,7 @@ for test_file in test_files:
             ie = test["initial"]["ie"],
             ram_lines = ram_lines,
 
+            e_ei = test["final"].get("ei",0),
             e_pc = test["final"]["pc"],
             e_sp = test["final"]["sp"],
             e_a = test["final"]["a"],
