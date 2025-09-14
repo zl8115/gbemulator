@@ -6,6 +6,7 @@ from string import Template
 
 # https://github.com/SingleStepTests/sm83
 REPO_PATH = os.getenv("SM83TestsPath")
+assert REPO_PATH, "REPO_PATH cannot be empty"
 TEST_DIR = os.path.join(REPO_PATH, "v1")
 CPP_HEADER_TEMPLATE = Template("""// Based on https://github.com/SingleStepTests/sm83
 // File: $test_file_name
@@ -49,7 +50,7 @@ $expected_ram_lines
 }
 """)
 
-test_files = filter(lambda p: re.search(r'^[0-9a-d][0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
+test_files = filter(lambda p: re.search(r'^[0-9a-e][0-9a-f].json', str(p.name)), pathlib.Path(TEST_DIR).iterdir())
 for test_file in test_files:
     test_json = json.loads(test_file.read_text());
     out_file_name = test_file.stem + ".cpp"
