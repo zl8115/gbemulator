@@ -582,6 +582,7 @@ void Rst(Cpu& cpu)
     cpu.reg.pc = Op;
 }
 
+
 /*     ************** Normal Ops *************     */
 void Undef(Cpu& cpu)
 {
@@ -622,6 +623,28 @@ void RLCA(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+template<R Dst>
+void RLC(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b7 = (ori_value >> 7) & 1;
+
+    uint8_t value = ori_value << 1 | b7;
+
+    cpu.reg.f &= ~(F::ALL);
+    if (b7)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
 void RLA(Cpu& cpu)
 {
     bool c = cpu.reg.f & F::CARRY_FLAG;
@@ -648,6 +671,27 @@ void RRCA(Cpu& cpu)
 
     uint8_t value = cpu.reg.a >> 1 | (b0 << 7);
     Set<R::A>(cpu, value);
+    ++cpu.reg.pc;
+}
+
+template<R Dst>
+void RRC(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b0 = ori_value & 0x1;
+    uint8_t value = ori_value >> 1 | (b0 << 7);
+
+    cpu.reg.f &= ~(F::ALL);
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
     ++cpu.reg.pc;
 }
 
@@ -742,6 +786,8 @@ void EnaI(Cpu& cpu)
 
 } // namespace
 
+void CbOp(Cpu& cpu); // Forward Declaration
+
 std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x0X
     ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
@@ -768,7 +814,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0xbX
     ::Or<R::A,R::B>, ::Or<R::A,R::C>, ::Or<R::A,R::D>, ::Or<R::A,R::E>, ::Or<R::A,R::H>, ::Or<R::A,R::L>, ::Or<R::A,R::IHL>, ::Or<R::A,R::A>, ::Cp<R::A,R::B>, ::Cp<R::A,R::C>, ::Cp<R::A,R::D>, ::Cp<R::A,R::E>, ::Cp<R::A,R::H>, ::Cp<R::A,R::L>, ::Cp<R::A,R::IHL>, ::Cp<R::A,R::A>,
     // 0xcX
-    ::Ret<C::NZ>, ::Pop<R::BC>, ::Jump<C::NZ>, ::Jump<C::NONE>, ::Call<C::NZ>, ::Push<R::BC>, ::Add<R::A,R::N>, ::Rst<0x00>, ::Ret<C::Z>, ::Ret<C::NONE>, ::Jump<C::Z>, ::Noop /* TODO */, ::Call<C::Z>, ::Call<C::NONE>, ::Adc<R::A,R::N>, ::Rst<0x08>,
+    ::Ret<C::NZ>, ::Pop<R::BC>, ::Jump<C::NZ>, ::Jump<C::NONE>, ::Call<C::NZ>, ::Push<R::BC>, ::Add<R::A,R::N>, ::Rst<0x00>, ::Ret<C::Z>, ::Ret<C::NONE>, ::Jump<C::Z>, ::CbOp, ::Call<C::Z>, ::Call<C::NONE>, ::Adc<R::A,R::N>, ::Rst<0x08>,
     // 0xdX
     ::Ret<C::NC>, ::Pop<R::DE>, ::Jump<C::NC>, ::Undef, ::Call<C::NC>, ::Push<R::DE>, ::Sub<R::A,R::N>, ::Rst<0x10>, ::Ret<C::C>, ::RetI, ::Jump<C::C>, ::Undef, ::Call<C::C>, ::Undef, ::Sbc<R::A,R::N>, ::Rst<0x18>,
     // 0xeX
@@ -777,7 +823,48 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     ::LoadH<R::A,R::N>, ::Pop<R::AF>, ::LoadH<R::A,R::C>, ::DisI, ::Undef, ::Push<R::AF>, ::Or<R::A,R::N>, ::Rst<0x30>, ::Load<R::HL,R::SPe>, ::Load<R::SP,R::HL>, ::Load<R::A,R::NN>, ::EnaI, ::Undef, ::Undef, ::Cp<R::A,R::N>, ::Rst<0x38>,
 };
 
+std::function<void(Cpu&)> s_CbInstructions[0x100] = {
+    // 0x0X
+    ::RLC<R::B>, ::RLC<R::C>, ::RLC<R::D>, ::RLC<R::E>, ::RLC<R::H>, ::RLC<R::L>, ::RLC<R::IHL>, ::RLC<R::A>,  ::RRC<R::B>, ::RRC<R::C>, ::RRC<R::D>, ::RRC<R::E>, ::RRC<R::H>, ::RRC<R::L>, ::RRC<R::IHL>, ::RRC<R::A>,
+    // 0x1X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x2X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x3X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x4X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x5X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x6X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x7X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x8X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0x9X
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xaX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xbX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xcX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xdX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xeX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    // 0xfX
+    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+};
+
 void CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
 {
     s_Instructions[opcode](cpu);
+}
+
+void CbOp(Cpu& cpu)
+{
+    uint8_t cbOpcode = cpu.ram[++cpu.reg.pc];
+    s_CbInstructions[cbOpcode](cpu);
 }

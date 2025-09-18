@@ -18,6 +18,8 @@ add_executable(tests
     d0.cpp d1.cpp d2.cpp        d4.cpp d5.cpp d6.cpp d7.cpp d8.cpp d9.cpp da.cpp        dc.cpp        de.cpp df.cpp
     e0.cpp e1.cpp e2.cpp               e5.cpp e6.cpp e7.cpp e8.cpp e9.cpp ea.cpp                      ee.cpp ef.cpp
     f0.cpp f1.cpp f2.cpp f3.cpp        f5.cpp f6.cpp f7.cpp f8.cpp f9.cpp fa.cpp fb.cpp               fe.cpp ff.cpp
+
+    cb\ 00.cpp cb\ 01.cpp cb\ 02.cpp cb\ 03.cpp cb\ 04.cpp cb\ 05.cpp cb\ 06.cpp cb\ 07.cpp cb\ 08.cpp cb\ 09.cpp cb\ 0a.cpp cb\ 0b.cpp cb\ 0c.cpp cb\ 0d.cpp cb\ 0e.cpp cb\ 0f.cpp
 )
 target_link_libraries(
     tests
