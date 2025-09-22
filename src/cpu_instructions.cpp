@@ -660,6 +660,29 @@ void RLA(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+template<R Dst>
+void RL(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b7 = (ori_value >> 7) & 1;
+
+    bool c = cpu.reg.f & F::CARRY_FLAG;
+    uint8_t value = ori_value << 1 | c;
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    if (b7)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
 void RRCA(Cpu& cpu)
 {
     cpu.reg.f &= ~(F::ALL);
@@ -707,6 +730,29 @@ void RRA(Cpu& cpu)
 
     uint8_t value = cpu.reg.a >> 1 | (c << 7);
     Set<R::A>(cpu, value);
+    ++cpu.reg.pc;
+}
+
+template<R Dst>
+void RR(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b0 = ori_value & 1;
+
+    bool c = cpu.reg.f & F::CARRY_FLAG;
+    uint8_t value = ori_value >> 1 | (c << 7);
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
     ++cpu.reg.pc;
 }
 
@@ -827,7 +873,7 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x0X
     ::RLC<R::B>, ::RLC<R::C>, ::RLC<R::D>, ::RLC<R::E>, ::RLC<R::H>, ::RLC<R::L>, ::RLC<R::IHL>, ::RLC<R::A>,  ::RRC<R::B>, ::RRC<R::C>, ::RRC<R::D>, ::RRC<R::E>, ::RRC<R::H>, ::RRC<R::L>, ::RRC<R::IHL>, ::RRC<R::A>,
     // 0x1X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::RL<R::B>, ::RL<R::C>, ::RL<R::D>, ::RL<R::E>, ::RL<R::H>, ::RL<R::L>, ::RL<R::IHL>, ::RL<R::A>,  ::RR<R::B>, ::RR<R::C>, ::RR<R::D>, ::RR<R::E>, ::RR<R::H>, ::RR<R::L>, ::RR<R::IHL>, ::RR<R::A>,
     // 0x2X
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0x3X
