@@ -609,6 +609,7 @@ void Halt(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+/*     ************** Bit Ops *************     */
 void RLCA(Cpu& cpu)
 {
     cpu.reg.f &= ~(F::ALL);
@@ -756,6 +757,52 @@ void RR(Cpu& cpu) requires SmallReg<Dst>
     ++cpu.reg.pc;
 }
 
+template<R Dst>
+void SLA(Cpu& cpu)
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b7 = ori_value >> 7;
+
+    uint8_t value = ori_value << 1;
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    if (b7)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
+template<R Dst>
+void SRA(Cpu& cpu)
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b0 = ori_value & 0x01;
+    uint8_t b7 = ori_value & 0x80;
+
+    uint8_t value = b7 | (ori_value >> 1);
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
+/*     ************** Arithmetic/Logical Ops *************     */
 void DAA(Cpu& cpu)
 {
     uint8_t ori_value = Read<R::A>(cpu);
@@ -809,6 +856,7 @@ void CCF(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+/*     ************** Misc Ops *************     */
 void RetI(Cpu& cpu)
 {
     auto Z = cpu.ram[cpu.reg.sp++];
@@ -875,7 +923,7 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x1X
     ::RL<R::B>, ::RL<R::C>, ::RL<R::D>, ::RL<R::E>, ::RL<R::H>, ::RL<R::L>, ::RL<R::IHL>, ::RL<R::A>,  ::RR<R::B>, ::RR<R::C>, ::RR<R::D>, ::RR<R::E>, ::RR<R::H>, ::RR<R::L>, ::RR<R::IHL>, ::RR<R::A>,
     // 0x2X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::SLA<R::B>, ::SLA<R::C>, ::SLA<R::D>, ::SLA<R::E>, ::SLA<R::H>, ::SLA<R::L>, ::SLA<R::IHL>, ::SLA<R::A>,  ::SRA<R::B>, ::SRA<R::C>, ::SRA<R::D>, ::SRA<R::E>, ::SRA<R::H>, ::SRA<R::L>, ::SRA<R::IHL>, ::SRA<R::A>,
     // 0x3X
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0x4X
