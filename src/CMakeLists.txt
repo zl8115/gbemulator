@@ -1,7 +1,6 @@
-add_subdirectory(test)
+add_subdirectory(sm83)
 
-add_executable(main
-    main.cpp
-    cpu.cpp
-    cpu_instructions.cpp
-    registers.cpp)
+# Test SM83 App
+add_executable(Sm83TestApp
+    main.cpp)
+target_link_libraries(Sm83TestApp Sm83)

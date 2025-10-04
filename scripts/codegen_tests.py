@@ -56,7 +56,7 @@ test_files = filter(lambda p: re.search(r'^([0-9a-f]|cb [0-2])[0-9a-f].json', st
 for test_file in test_files:
     test_json = json.loads(test_file.read_text());
     out_file_name = test_file.stem + ".cpp"
-    out_dir = pathlib.Path(__file__).parent.parent / "src" / "test"
+    out_dir = pathlib.Path(__file__).parent.parent / "src" / "sm83" / "test"
     out_file = open(out_dir / out_file_name, "w")
     header_str = CPP_HEADER_TEMPLATE.substitute(test_file_name = test_file.name)
     out_file.write(header_str)

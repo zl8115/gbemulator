@@ -18,5 +18,6 @@ set(CMAKE_CXX_STANDARD_MINIMUM 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(Dependencies.cmake)
+include(CTest)
 
 add_subdirectory(src)
