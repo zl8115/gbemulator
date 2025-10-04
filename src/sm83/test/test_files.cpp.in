@@ -345,3 +345,21 @@ TEST_CASE("cb 2c") { test_file(sTestDir + "cb 2c.json"); }
 TEST_CASE("cb 2d") { test_file(sTestDir + "cb 2d.json"); }
 TEST_CASE("cb 2e") { test_file(sTestDir + "cb 2e.json"); }
 TEST_CASE("cb 2f") { test_file(sTestDir + "cb 2f.json"); }
+
+// cb 0x3X
+TEST_CASE("cb 30") { test_file(sTestDir + "cb 30.json"); }
+TEST_CASE("cb 31") { test_file(sTestDir + "cb 31.json"); }
+TEST_CASE("cb 32") { test_file(sTestDir + "cb 32.json"); }
+TEST_CASE("cb 33") { test_file(sTestDir + "cb 33.json"); }
+TEST_CASE("cb 34") { test_file(sTestDir + "cb 34.json"); }
+TEST_CASE("cb 35") { test_file(sTestDir + "cb 35.json"); }
+TEST_CASE("cb 36") { test_file(sTestDir + "cb 36.json"); }
+TEST_CASE("cb 37") { test_file(sTestDir + "cb 37.json"); }
+TEST_CASE("cb 38") { test_file(sTestDir + "cb 38.json"); }
+TEST_CASE("cb 39") { test_file(sTestDir + "cb 39.json"); }
+TEST_CASE("cb 3a") { test_file(sTestDir + "cb 3a.json"); }
+TEST_CASE("cb 3b") { test_file(sTestDir + "cb 3b.json"); }
+TEST_CASE("cb 3c") { test_file(sTestDir + "cb 3c.json"); }
+TEST_CASE("cb 3d") { test_file(sTestDir + "cb 3d.json"); }
+TEST_CASE("cb 3e") { test_file(sTestDir + "cb 3e.json"); }
+TEST_CASE("cb 3f") { test_file(sTestDir + "cb 3f.json"); }

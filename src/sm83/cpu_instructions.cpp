@@ -802,6 +802,43 @@ void SRA(Cpu& cpu)
     ++cpu.reg.pc;
 }
 
+template<R Dst>
+void Swap(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = (ori_value << 4) | (ori_value >> 4);
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
+template<R Dst>
+void SRL(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t b0 = ori_value & 1;
+    uint8_t value = (ori_value >> 1);
+
+    cpu.reg.f &= ~(F::ALL);
+    if (value == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    if (b0)
+    {
+        cpu.reg.f |= F::CARRY_FLAG;
+    }
+
+    Set<Dst>(cpu, value);
+    ++cpu.reg.pc;
+}
+
 /*     ************** Arithmetic/Logical Ops *************     */
 void DAA(Cpu& cpu)
 {
@@ -925,7 +962,7 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x2X
     ::SLA<R::B>, ::SLA<R::C>, ::SLA<R::D>, ::SLA<R::E>, ::SLA<R::H>, ::SLA<R::L>, ::SLA<R::IHL>, ::SLA<R::A>,  ::SRA<R::B>, ::SRA<R::C>, ::SRA<R::D>, ::SRA<R::E>, ::SRA<R::H>, ::SRA<R::L>, ::SRA<R::IHL>, ::SRA<R::A>,
     // 0x3X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::Swap<R::B>, ::Swap<R::C>, ::Swap<R::D>, ::Swap<R::E>, ::Swap<R::H>, ::Swap<R::L>, ::Swap<R::IHL>, ::Swap<R::A>,  ::SRL<R::B>, ::SRL<R::C>, ::SRL<R::D>, ::SRL<R::E>, ::SRL<R::H>, ::SRL<R::L>, ::SRL<R::IHL>, ::SRL<R::A>,
     // 0x4X
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0x5X
