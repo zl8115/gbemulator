@@ -14,5 +14,5 @@ public:
     uint8_t ei = 0;
     uint8_t ime = 0;
     uint8_t ie = 0;
-    uint8_t ram[0xFFFF];
+    uint8_t ram[0x10000];
 };
