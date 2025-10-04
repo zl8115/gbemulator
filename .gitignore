@@ -43,9 +43,6 @@
 # Clangd Cache
 .cache/
 
-# CodeGen tests
-src/sm83/test/*.cpp
-
 # CMake
 build/
 CMakeLists.txt.user
