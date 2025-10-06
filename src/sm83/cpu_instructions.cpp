@@ -839,6 +839,21 @@ void SRL(Cpu& cpu) requires SmallReg<Dst>
     ++cpu.reg.pc;
 }
 
+template<int Bit, R Dst>
+void BIT(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+{
+    uint8_t value = Read<Dst>(cpu);
+    constexpr uint8_t bitMask = 1 << Bit;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG);
+    cpu.reg.f |= F::HALF_CARRY_FLAG;
+    if ((value & bitMask) == 0)
+    {
+        cpu.reg.f |= F::ZERO_FLAG;
+    }
+    ++cpu.reg.pc;
+}
+
 /*     ************** Arithmetic/Logical Ops *************     */
 void DAA(Cpu& cpu)
 {
@@ -964,7 +979,7 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x3X
     ::Swap<R::B>, ::Swap<R::C>, ::Swap<R::D>, ::Swap<R::E>, ::Swap<R::H>, ::Swap<R::L>, ::Swap<R::IHL>, ::Swap<R::A>,  ::SRL<R::B>, ::SRL<R::C>, ::SRL<R::D>, ::SRL<R::E>, ::SRL<R::H>, ::SRL<R::L>, ::SRL<R::IHL>, ::SRL<R::A>,
     // 0x4X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::BIT<0,R::B>, ::BIT<0,R::C>, ::BIT<0,R::D>, ::BIT<0,R::E>, ::BIT<0,R::H>, ::BIT<0,R::L>, ::BIT<0,R::IHL>, ::BIT<0,R::A>,  ::BIT<1,R::B>, ::BIT<1,R::C>, ::BIT<1,R::D>, ::BIT<1,R::E>, ::BIT<1,R::H>, ::BIT<1,R::L>, ::BIT<1,R::IHL>, ::BIT<1,R::A>,
     // 0x5X
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0x6X
