@@ -603,8 +603,9 @@ void Stop(Cpu& cpu)
 
 void Halt(Cpu& cpu)
 {
-    // TODO: Properly implement
-    if (cpu.ie & !cpu.ime)
+    constexpr int interrupt_flag = 0;     // TODO: Properly implement
+
+    if ((cpu.ime == 0) && (cpu.ie & interrupt_flag) != 0)
       return;
     ++cpu.reg.pc;
 }
