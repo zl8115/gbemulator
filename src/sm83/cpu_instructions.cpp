@@ -982,7 +982,7 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x4X
     ::BIT<0,R::B>, ::BIT<0,R::C>, ::BIT<0,R::D>, ::BIT<0,R::E>, ::BIT<0,R::H>, ::BIT<0,R::L>, ::BIT<0,R::IHL>, ::BIT<0,R::A>,  ::BIT<1,R::B>, ::BIT<1,R::C>, ::BIT<1,R::D>, ::BIT<1,R::E>, ::BIT<1,R::H>, ::BIT<1,R::L>, ::BIT<1,R::IHL>, ::BIT<1,R::A>,
     // 0x5X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::BIT<2,R::B>, ::BIT<2,R::C>, ::BIT<2,R::D>, ::BIT<2,R::E>, ::BIT<2,R::H>, ::BIT<2,R::L>, ::BIT<2,R::IHL>, ::BIT<2,R::A>,  ::BIT<3,R::B>, ::BIT<3,R::C>, ::BIT<3,R::D>, ::BIT<3,R::E>, ::BIT<3,R::H>, ::BIT<3,R::L>, ::BIT<3,R::IHL>, ::BIT<3,R::A>,
     // 0x6X
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0x7X
