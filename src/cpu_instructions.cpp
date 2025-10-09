@@ -313,7 +313,16 @@ void Noop(Cpu& cpu)
 
 void Stop(Cpu& cpu)
 {
+    // TODO: Properly implement
     cpu.ime = 0;
+    ++cpu.reg.pc;
+}
+
+void Halt(Cpu& cpu)
+{
+    // TODO: Properly implement
+    if (!cpu.ime & cpu.ie)
+        return;
     ++cpu.reg.pc;
 }
 
@@ -446,7 +455,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x6X
     ::Load<R::H,R::B>, ::Load<R::H,R::C>, ::Load<R::H,R::D>, ::Load<R::H,R::E>, ::Load<R::H,R::H>, ::Load<R::H,R::L>, ::Load<R::H,R::IHL>, ::Load<R::H,R::A>, ::Load<R::L,R::B>, ::Load<R::L,R::C>, ::Load<R::L,R::D>, ::Load<R::L,R::E>, ::Load<R::L,R::H>, ::Load<R::L,R::L>, ::Load<R::L,R::IHL>, ::Load<R::L,R::A>,
     // 0x7X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Load<R::IHL,R::B>, ::Load<R::IHL,R::C>, ::Load<R::IHL,R::D>, ::Load<R::IHL,R::E>, ::Load<R::IHL,R::H>, ::Load<R::IHL,R::L>, ::Halt, ::Load<R::IHL,R::A>, ::Load<R::A,R::B>, ::Load<R::A,R::C>, ::Load<R::A,R::D>, ::Load<R::A,R::E>, ::Load<R::A,R::H>, ::Load<R::A,R::L>, ::Load<R::A,R::IHL>, ::Load<R::A,R::A>,
     // 0x8X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0x9X

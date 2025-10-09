@@ -12,5 +12,6 @@ public:
 public:
     Registers reg;
     uint8_t ime = 0;
+    uint8_t ie = 0;
     uint8_t ram[0xFFFF];
 };
