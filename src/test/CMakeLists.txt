@@ -10,6 +10,7 @@ add_executable(tests
     50.cpp 51.cpp 52.cpp 53.cpp 54.cpp 55.cpp 56.cpp 57.cpp 58.cpp 59.cpp 5a.cpp 5b.cpp 5c.cpp 5d.cpp 5e.cpp 5f.cpp
     60.cpp 61.cpp 62.cpp 63.cpp 64.cpp 65.cpp 66.cpp 67.cpp 68.cpp 69.cpp 6a.cpp 6b.cpp 6c.cpp 6d.cpp 6e.cpp 6f.cpp
     70.cpp 71.cpp 72.cpp 73.cpp 74.cpp 75.cpp 76.cpp 77.cpp 78.cpp 79.cpp 7a.cpp 7b.cpp 7c.cpp 7d.cpp 7e.cpp 7f.cpp
+    80.cpp 81.cpp 82.cpp 83.cpp 84.cpp 85.cpp 86.cpp 87.cpp 88.cpp 89.cpp 8a.cpp 8b.cpp 8c.cpp 8d.cpp 8e.cpp 8f.cpp
 )
 target_link_libraries(
     tests

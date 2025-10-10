@@ -207,12 +207,15 @@ void Add(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
     uint8_t ori_value = Read<Dst>(cpu);
     uint8_t new_value = ori_value + value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
         cpu.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) + (value & 0xF) > 0xF)
         cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (new_value < ori_value)
+        cpu.reg.f |= F::CARRY_FLAG;
 
     Set<Dst>(cpu, new_value);
     ++cpu.reg.pc;
@@ -241,7 +244,7 @@ void Add(Cpu& cpu, uint16_t value) requires LargeReg<Dst>
 template <R Dst, R Src>
 void Add(Cpu& cpu) requires SmallReg<Dst>
 {
-    Add<Dst>(cpu, Read<Src>());
+    Add<Dst>(cpu, Read<Src>(cpu));
 }
 
 template <R Dst, R Src>
@@ -250,10 +253,43 @@ void Add(Cpu& cpu) requires LargeReg<Dst>
     Add<Dst>(cpu, ReadWord<Src>(cpu));
 }
 
+template <R Dst, R Src>
+void Adc(Cpu& cpu) requires SmallReg<Dst>
+{
+    uint8_t carry = (cpu.reg.f & F::CARRY_FLAG) ? 1 : 0;
+    uint8_t value = Read<Src>(cpu);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value + value + carry;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+
+    if ((ori_value & 0xF) + (value & 0xF) + carry > 0xF)
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    if (new_value - carry < ori_value)
+        cpu.reg.f |= F::CARRY_FLAG;
+
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
 template <R Dst>
 void Inc(Cpu& cpu) requires SmallReg<Dst>
 {
-    Add<Dst>(cpu, 1);
+    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t new_value = ori_value + 1;
+
+    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
+    if (new_value == 0)
+        cpu.reg.f |= F::ZERO_FLAG;
+
+    if ((ori_value & 0xF) + 1 > 0xF)
+        cpu.reg.f |= F::HALF_CARRY_FLAG;
+
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
 }
 
 template <R Dst>
@@ -321,8 +357,8 @@ void Stop(Cpu& cpu)
 void Halt(Cpu& cpu)
 {
     // TODO: Properly implement
-    if (!cpu.ime & cpu.ie)
-        return;
+    if (cpu.ie & !cpu.ime)
+      return;
     ++cpu.reg.pc;
 }
 
@@ -457,7 +493,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     // 0x7X
     ::Load<R::IHL,R::B>, ::Load<R::IHL,R::C>, ::Load<R::IHL,R::D>, ::Load<R::IHL,R::E>, ::Load<R::IHL,R::H>, ::Load<R::IHL,R::L>, ::Halt, ::Load<R::IHL,R::A>, ::Load<R::A,R::B>, ::Load<R::A,R::C>, ::Load<R::A,R::D>, ::Load<R::A,R::E>, ::Load<R::A,R::H>, ::Load<R::A,R::L>, ::Load<R::A,R::IHL>, ::Load<R::A,R::A>,
     // 0x8X
-    ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
+    ::Add<R::A,R::B>, ::Add<R::A,R::C>, ::Add<R::A,R::D>, ::Add<R::A,R::E>, ::Add<R::A,R::H>, ::Add<R::A,R::L>, ::Add<R::A,R::IHL>, ::Add<R::A,R::A>, ::Adc<R::A,R::B>, ::Adc<R::A,R::C>, ::Adc<R::A,R::D>, ::Adc<R::A,R::E>, ::Adc<R::A,R::H>, ::Adc<R::A,R::L>, ::Adc<R::A,R::IHL>, ::Adc<R::A,R::A>,
     // 0x9X
     ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop, ::Noop,
     // 0xaX
