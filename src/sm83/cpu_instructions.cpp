@@ -855,6 +855,15 @@ void BIT(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
     ++cpu.reg.pc;
 }
 
+template<int Bit, R Dst>
+void RES(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+{
+    constexpr uint8_t bitMask = 1 << Bit;
+    uint8_t new_value = Read<Dst>(cpu) & ~bitMask;
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
 /*     ************** Arithmetic/Logical Ops *************     */
 void DAA(Cpu& cpu)
 {
@@ -988,13 +997,13 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0x7X
     ::BIT<6,R::B>, ::BIT<6,R::C>, ::BIT<6,R::D>, ::BIT<6,R::E>, ::BIT<6,R::H>, ::BIT<6,R::L>, ::BIT<6,R::IHL>, ::BIT<6,R::A>,  ::BIT<7,R::B>, ::BIT<7,R::C>, ::BIT<7,R::D>, ::BIT<7,R::E>, ::BIT<7,R::H>, ::BIT<7,R::L>, ::BIT<7,R::IHL>, ::BIT<7,R::A>,
     // 0x8X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::RES<0,R::B>, ::RES<0,R::C>, ::RES<0,R::D>, ::RES<0,R::E>, ::RES<0,R::H>, ::RES<0,R::L>, ::RES<0,R::IHL>, ::RES<0,R::A>,  ::RES<1,R::B>, ::RES<1,R::C>, ::RES<1,R::D>, ::RES<1,R::E>, ::RES<1,R::H>, ::RES<1,R::L>, ::RES<1,R::IHL>, ::RES<1,R::A>,
     // 0x9X
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::RES<2,R::B>, ::RES<2,R::C>, ::RES<2,R::D>, ::RES<2,R::E>, ::RES<2,R::H>, ::RES<2,R::L>, ::RES<2,R::IHL>, ::RES<2,R::A>,  ::RES<3,R::B>, ::RES<3,R::C>, ::RES<3,R::D>, ::RES<3,R::E>, ::RES<3,R::H>, ::RES<3,R::L>, ::RES<3,R::IHL>, ::RES<3,R::A>,
     // 0xaX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::RES<4,R::B>, ::RES<4,R::C>, ::RES<4,R::D>, ::RES<4,R::E>, ::RES<4,R::H>, ::RES<4,R::L>, ::RES<4,R::IHL>, ::RES<4,R::A>,  ::RES<5,R::B>, ::RES<5,R::C>, ::RES<5,R::D>, ::RES<5,R::E>, ::RES<5,R::H>, ::RES<5,R::L>, ::RES<5,R::IHL>, ::RES<5,R::A>,
     // 0xbX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::RES<6,R::B>, ::RES<6,R::C>, ::RES<6,R::D>, ::RES<6,R::E>, ::RES<6,R::H>, ::RES<6,R::L>, ::RES<6,R::IHL>, ::RES<6,R::A>,  ::RES<7,R::B>, ::RES<7,R::C>, ::RES<7,R::D>, ::RES<7,R::E>, ::RES<7,R::H>, ::RES<7,R::L>, ::RES<7,R::IHL>, ::RES<7,R::A>,
     // 0xcX
     ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
     // 0xdX
