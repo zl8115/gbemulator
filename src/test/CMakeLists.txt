@@ -11,6 +11,7 @@ add_executable(tests
     60.cpp 61.cpp 62.cpp 63.cpp 64.cpp 65.cpp 66.cpp 67.cpp 68.cpp 69.cpp 6a.cpp 6b.cpp 6c.cpp 6d.cpp 6e.cpp 6f.cpp
     70.cpp 71.cpp 72.cpp 73.cpp 74.cpp 75.cpp 76.cpp 77.cpp 78.cpp 79.cpp 7a.cpp 7b.cpp 7c.cpp 7d.cpp 7e.cpp 7f.cpp
     80.cpp 81.cpp 82.cpp 83.cpp 84.cpp 85.cpp 86.cpp 87.cpp 88.cpp 89.cpp 8a.cpp 8b.cpp 8c.cpp 8d.cpp 8e.cpp 8f.cpp
+    90.cpp 91.cpp 92.cpp 93.cpp 94.cpp 95.cpp 96.cpp 97.cpp 98.cpp 99.cpp 9a.cpp 9b.cpp 9c.cpp 9d.cpp 9e.cpp 9f.cpp
 )
 target_link_libraries(
     tests
