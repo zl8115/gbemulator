@@ -864,6 +864,15 @@ void RES(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
     ++cpu.reg.pc;
 }
 
+template<int Bit, R Dst>
+void SET(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+{
+    constexpr uint8_t bitMask = 1 << Bit;
+    uint8_t new_value = Read<Dst>(cpu) | bitMask;
+    Set<Dst>(cpu, new_value);
+    ++cpu.reg.pc;
+}
+
 /*     ************** Arithmetic/Logical Ops *************     */
 void DAA(Cpu& cpu)
 {
@@ -1005,13 +1014,13 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     // 0xbX
     ::RES<6,R::B>, ::RES<6,R::C>, ::RES<6,R::D>, ::RES<6,R::E>, ::RES<6,R::H>, ::RES<6,R::L>, ::RES<6,R::IHL>, ::RES<6,R::A>,  ::RES<7,R::B>, ::RES<7,R::C>, ::RES<7,R::D>, ::RES<7,R::E>, ::RES<7,R::H>, ::RES<7,R::L>, ::RES<7,R::IHL>, ::RES<7,R::A>,
     // 0xcX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::SET<0,R::B>, ::SET<0,R::C>, ::SET<0,R::D>, ::SET<0,R::E>, ::SET<0,R::H>, ::SET<0,R::L>, ::SET<0,R::IHL>, ::SET<0,R::A>,  ::SET<1,R::B>, ::SET<1,R::C>, ::SET<1,R::D>, ::SET<1,R::E>, ::SET<1,R::H>, ::SET<1,R::L>, ::SET<1,R::IHL>, ::SET<1,R::A>,
     // 0xdX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::SET<2,R::B>, ::SET<2,R::C>, ::SET<2,R::D>, ::SET<2,R::E>, ::SET<2,R::H>, ::SET<2,R::L>, ::SET<2,R::IHL>, ::SET<2,R::A>,  ::SET<3,R::B>, ::SET<3,R::C>, ::SET<3,R::D>, ::SET<3,R::E>, ::SET<3,R::H>, ::SET<3,R::L>, ::SET<3,R::IHL>, ::SET<3,R::A>,
     // 0xeX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::SET<4,R::B>, ::SET<4,R::C>, ::SET<4,R::D>, ::SET<4,R::E>, ::SET<4,R::H>, ::SET<4,R::L>, ::SET<4,R::IHL>, ::SET<4,R::A>,  ::SET<5,R::B>, ::SET<5,R::C>, ::SET<5,R::D>, ::SET<5,R::E>, ::SET<5,R::H>, ::SET<5,R::L>, ::SET<5,R::IHL>, ::SET<5,R::A>,
     // 0xfX
-    ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef, ::Undef,
+    ::SET<6,R::B>, ::SET<6,R::C>, ::SET<6,R::D>, ::SET<6,R::E>, ::SET<6,R::H>, ::SET<6,R::L>, ::SET<6,R::IHL>, ::SET<6,R::A>,  ::SET<7,R::B>, ::SET<7,R::C>, ::SET<7,R::D>, ::SET<7,R::E>, ::SET<7,R::H>, ::SET<7,R::L>, ::SET<7,R::IHL>, ::SET<7,R::A>,
 };
 
 void CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
