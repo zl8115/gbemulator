@@ -10,6 +10,6 @@ void Cpu::Execute(uint8_t opcode)
 
 void Cpu::Step()
 {
-    auto opcode = ram[reg.pc];
+    auto opcode = mmu.Read(reg.pc);
     Execute(opcode);
 }

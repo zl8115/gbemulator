@@ -33,13 +33,13 @@ Cpu load_state(const json& initial)
     cpu.reg.sp = initial.value<std::uint16_t>("sp", 0);
     if (initial.contains("ram"))
     {
-        int index = 0;
+        int addr = 0;
         int value = 0;
         for (const auto& [_,v]: initial["ram"].items())
         {
-            index = v.at(0).get<int>();
+            addr = v.at(0).get<int>();
             value = v.at(1).get<int>();
-            cpu.ram[index] = value;
+            cpu.mmu.Write(addr, value);
         }
     }
 
@@ -63,13 +63,13 @@ bool check_final_state(const Cpu& cpu, json final)
     hasFailures |= cpu.reg.sp != final.value<std::uint16_t>("sp", 0);
     if (final.contains("ram"))
     {
-        int index = 0;
+        int addr = 0;
         int value = 0;
         for (const auto& [_,v]: final["ram"].items())
         {
-            index = v.at(0).get<int>();
+            addr = v.at(0).get<int>();
             value = v.at(1).get<int>();
-            hasFailures |= cpu.ram[index] != value;
+            hasFailures |= cpu.mmu.Read(addr) != value;
         }
     }
 
@@ -112,13 +112,13 @@ void run_dynamic_section_test(const json& test_case)
         CHECK(static_cast<int>(cpu.reg.sp) == final.value<int>("sp", 0));
         if (final.contains("ram"))
         {
-            int index = 0;
+            int addr = 0;
             int value = 0;
             for (const auto& [_,v]: final["ram"].items())
             {
-                index = v.at(0).get<int>();
+                addr = v.at(0).get<int>();
                 value = v.at(1).get<int>();
-                CHECK(static_cast<int>(cpu.ram[index]) == value);
+                CHECK(static_cast<int>(cpu.mmu.Read(addr)) == value);
             }
         }
     }

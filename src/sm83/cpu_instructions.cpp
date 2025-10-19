@@ -96,8 +96,8 @@ template <> inline uint8_t Read<R::D>(Cpu& cpu) { return cpu.reg.d; }
 template <> inline uint8_t Read<R::E>(Cpu& cpu) { return cpu.reg.e; }
 template <> inline uint8_t Read<R::H>(Cpu& cpu) { return cpu.reg.h; }
 template <> inline uint8_t Read<R::L>(Cpu& cpu) { return cpu.reg.l; }
-template <> inline uint8_t Read<R::N>(Cpu& cpu) { return cpu.ram[++cpu.reg.pc]; }
-template <> inline uint8_t Read<R::IHL>(Cpu& cpu) { return cpu.ram[ReadWord<R::HL>(cpu)]; }
+template <> inline uint8_t Read<R::N>(Cpu& cpu) { return cpu.mmu.Read(++cpu.reg.pc); }
+template <> inline uint8_t Read<R::IHL>(Cpu& cpu) { return cpu.mmu.Read(ReadWord<R::HL>(cpu)); }
 
 template <> inline uint16_t ReadWord<R::AF>(Cpu& cpu) { return ToWord(Read<R::A>(cpu), Read<R::F>(cpu)); }
 template <> inline uint16_t ReadWord<R::BC>(Cpu& cpu) { return ToWord(Read<R::B>(cpu), Read<R::C>(cpu)); }
@@ -105,16 +105,16 @@ template <> inline uint16_t ReadWord<R::DE>(Cpu& cpu) { return ToWord(Read<R::D>
 template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu) { return ToWord(Read<R::H>(cpu), Read<R::L>(cpu)); }
 template <> inline uint16_t ReadWord<R::SP>(Cpu& cpu) { return cpu.reg.sp; }
 template <> inline uint16_t ReadWord<R::NN>(Cpu& cpu) {
-    auto lobyte = cpu.ram[++cpu.reg.pc];
-    auto hibyte = cpu.ram[++cpu.reg.pc];
+    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
+    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
     return ToWord(hibyte, lobyte);
 }
 
 template <R Src>
 inline uint16_t ReadH(Cpu& cpu) requires HReg<Src>;
 template <> inline uint16_t ReadH<R::A>(Cpu& cpu) { return Read<R::A>(cpu); }
-template <> inline uint16_t ReadH<R::N>(Cpu& cpu) { return cpu.ram[ToWord(0xFF, Read<R::N>(cpu))]; }
-template <> inline uint16_t ReadH<R::C>(Cpu& cpu) { return cpu.ram[ToWord(0xFF, Read<R::C>(cpu))]; }
+template <> inline uint16_t ReadH<R::N>(Cpu& cpu) { return cpu.mmu.Read(ToWord(0xFF, Read<R::N>(cpu))); }
+template <> inline uint16_t ReadH<R::C>(Cpu& cpu) { return cpu.mmu.Read(ToWord(0xFF, Read<R::C>(cpu))); }
 
 template <R Dst>
 inline void Set(Cpu& cpu, uint8_t value) requires SmallReg<Dst>;
@@ -126,7 +126,7 @@ template <> inline void Set<R::D>(Cpu& cpu, uint8_t value) { cpu.reg.d = value; 
 template <> inline void Set<R::E>(Cpu& cpu, uint8_t value) { cpu.reg.e = value; }
 template <> inline void Set<R::H>(Cpu& cpu, uint8_t value) { cpu.reg.h = value; }
 template <> inline void Set<R::L>(Cpu& cpu, uint8_t value) { cpu.reg.l = value; }
-template <> inline void Set<R::IHL>(Cpu& cpu, uint8_t value) { cpu.ram[ReadWord<R::HL>(cpu)] = value; }
+template <> inline void Set<R::IHL>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ReadWord<R::HL>(cpu), value); }
 
 template <R Dst>
 inline void SetWord(Cpu& cpu, uint16_t value) requires LargeReg<Dst>;
@@ -137,15 +137,15 @@ template <> inline void SetWord<R::HL>(Cpu& cpu, uint16_t value) { Set<R::H>(cpu
 template <> inline void SetWord<R::SP>(Cpu& cpu, uint16_t value) { cpu.reg.sp = value; }
 template <> inline void SetWord<R::NN>(Cpu& cpu, uint16_t value) {
     auto nn = ReadWord<R::NN>(cpu);
-    cpu.ram[nn] = Lsb(value);
-    cpu.ram[++nn] = Msb(value);
+    cpu.mmu.Write(nn, Lsb(value));
+    cpu.mmu.Write(++nn, Msb(value));
 }
 
 template <R Src>
 inline void SetH(Cpu& cpu, uint8_t value) requires HReg<Src>;
 template <> inline void SetH<R::A>(Cpu& cpu, uint8_t value) { Set<R::A>(cpu, value); }
-template <> inline void SetH<R::N>(Cpu& cpu, uint8_t value) { cpu.ram[ToWord(0xFF, Read<R::N>(cpu))] = value; }
-template <> inline void SetH<R::C>(Cpu& cpu, uint8_t value) { cpu.ram[ToWord(0xFF, Read<R::C>(cpu))] = value; }
+template <> inline void SetH<R::N>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ToWord(0xFF, Read<R::N>(cpu)), value); }
+template <> inline void SetH<R::C>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ToWord(0xFF, Read<R::C>(cpu)), value); }
 
 /******************** Condition Check Functions ********************/
 
@@ -179,7 +179,7 @@ template <R Dst, R Src>
 void Load(Cpu& cpu) requires SmallReg<Dst> && LargeReg<Src>
 {
     auto addr = ReadWord<Src>(cpu);
-    Set<Dst>(cpu, cpu.ram[addr]);
+    Set<Dst>(cpu, cpu.mmu.Read(addr));
     ++cpu.reg.pc;
 }
 
@@ -187,7 +187,7 @@ template <R Dst, R Src>
 void Load(Cpu& cpu) requires LargeReg<Dst> && SmallReg<Src>
 {
     auto addr = ReadWord<Dst>(cpu);
-    cpu.ram[addr] = Read<Src>(cpu);
+    cpu.mmu.Write(addr, Read<Src>(cpu));
     ++cpu.reg.pc;
 }
 
@@ -499,8 +499,8 @@ void Cp(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
 template <R Dst>
 void Pop(Cpu& cpu) requires LargeReg<Dst>
 {
-    auto lobyte = cpu.ram[cpu.reg.sp++];
-    auto hibyte = cpu.ram[cpu.reg.sp++];
+    auto lobyte = cpu.mmu.Read(cpu.reg.sp++);
+    auto hibyte = cpu.mmu.Read(cpu.reg.sp++);;
     SetWord<Dst>(cpu, ToWord(hibyte, lobyte));
     ++cpu.reg.pc;
 }
@@ -509,8 +509,8 @@ template <R Dst>
 void Push(Cpu& cpu) requires LargeReg<Dst>
 {
     auto data = ReadWord<Dst>(cpu);
-    cpu.ram[--cpu.reg.sp] = Msb(data);
-    cpu.ram[--cpu.reg.sp] = Lsb(data);
+    cpu.mmu.Write(--cpu.reg.sp, Msb(data));
+    cpu.mmu.Write(--cpu.reg.sp, Lsb(data));
     ++cpu.reg.pc;
 }
 
@@ -518,7 +518,7 @@ void Push(Cpu& cpu) requires LargeReg<Dst>
 template <C Cnd>
 void RelativeJump(Cpu& cpu)
 {
-    int8_t e = cpu.ram[++cpu.reg.pc];
+    int8_t e = cpu.mmu.Read(++cpu.reg.pc);
     if (ConditionCheck<Cnd>(cpu))
     {
         auto new_pc = cpu.reg.pc + e;
@@ -530,8 +530,8 @@ void RelativeJump(Cpu& cpu)
 template <C Cnd>
 void Jump(Cpu& cpu)
 {
-    auto lobyte = cpu.ram[++cpu.reg.pc];
-    auto hibyte = cpu.ram[++cpu.reg.pc];
+    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
+    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
@@ -548,14 +548,14 @@ void Jump(Cpu& cpu) requires (Dst == R::HL)
 template <C Cnd>
 void Call(Cpu& cpu)
 {
-    auto lobyte = cpu.ram[++cpu.reg.pc];
-    auto hibyte = cpu.ram[++cpu.reg.pc];
+    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
+    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
         auto nn = ToWord(hibyte, lobyte);
-        cpu.ram[--cpu.reg.sp] = Msb(cpu.reg.pc);
-        cpu.ram[--cpu.reg.sp] = Lsb(cpu.reg.pc);
+        cpu.mmu.Write(--cpu.reg.sp, Msb(cpu.reg.pc));
+        cpu.mmu.Write(--cpu.reg.sp, Lsb(cpu.reg.pc));
         cpu.reg.pc = nn;
     }
 }
@@ -566,8 +566,8 @@ void Ret(Cpu& cpu)
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
-        auto lobyte = cpu.ram[cpu.reg.sp++];
-        auto hibyte = cpu.ram[cpu.reg.sp++];
+        auto lobyte = cpu.mmu.Read(cpu.reg.sp++);
+        auto hibyte = cpu.mmu.Read(cpu.reg.sp++);
         cpu.reg.pc = ToWord(hibyte, lobyte);
     }
 }
@@ -577,8 +577,8 @@ template <uint8_t Op>
 void Rst(Cpu& cpu)
 {
     ++cpu.reg.pc;
-    cpu.ram[--cpu.reg.sp] = Msb(cpu.reg.pc);
-    cpu.ram[--cpu.reg.sp] = Lsb(cpu.reg.pc);
+    cpu.mmu.Write(--cpu.reg.sp, Msb(cpu.reg.pc));
+    cpu.mmu.Write(--cpu.reg.sp, Lsb(cpu.reg.pc));
     cpu.reg.pc = Op;
 }
 
@@ -930,8 +930,8 @@ void CCF(Cpu& cpu)
 /*     ************** Misc Ops *************     */
 void RetI(Cpu& cpu)
 {
-    auto Z = cpu.ram[cpu.reg.sp++];
-    auto W = cpu.ram[cpu.reg.sp++];
+    auto Z = cpu.mmu.Read(cpu.reg.sp++);
+    auto W = cpu.mmu.Read(cpu.reg.sp++);
     cpu.reg.pc = ToWord(W,Z);
     cpu.ime = 1;
 }
@@ -1030,6 +1030,6 @@ void CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
 
 void CbOp(Cpu& cpu)
 {
-    uint8_t cbOpcode = cpu.ram[++cpu.reg.pc];
+    uint8_t cbOpcode = cpu.mmu.Read(++cpu.reg.pc);
     s_CbInstructions[cbOpcode](cpu);
 }

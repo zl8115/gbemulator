@@ -2,10 +2,12 @@
 add_library(Sm83 STATIC
     cpu.h
     cpu_instructions.h
+    mmu.h
     registers.h
 
     cpu.cpp
     cpu_instructions.cpp
+    mmu.cpp
     registers.cpp)
 target_include_directories(
     Sm83
