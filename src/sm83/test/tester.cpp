@@ -78,10 +78,16 @@ bool check_final_state(const Cpu& cpu, json final)
 
 bool test_case_will_pass(const json& test_case)
 {
+    const auto name = test_case.value<std::string>("name", "");
+    // Skip cycle checks for HALT and STOP
+    const bool skipCyclesCheck = name.starts_with("10") || name.starts_with("76");
     const auto& initial = test_case["initial"];
     const auto& final = test_case["final"];
+    const auto& cycles = test_case["cycles"];
     Cpu cpu = load_state(initial);
-    cpu.Step();
+    auto cyclesTaken = cpu.Step();
+    if (!skipCyclesCheck && cyclesTaken != cycles.size())
+        return false;
     return check_final_state(cpu, final);
 }
 
@@ -90,10 +96,11 @@ void run_dynamic_section_test(const json& test_case)
     const auto name = test_case.value<std::string>("name", "");
     const auto& initial = test_case["initial"];
     const auto& final = test_case["final"];
+    const auto& cycles = test_case["cycles"];
     DYNAMIC_SECTION(name)
     {
         Cpu cpu = load_state(initial);
-        cpu.Step();
+        auto cyclesTaken = cpu.Step();
         INFO("Initial: " + nlohmann::to_string(initial));
         INFO("Final: " + nlohmann::to_string(final));
 
@@ -121,6 +128,7 @@ void run_dynamic_section_test(const json& test_case)
                 CHECK(static_cast<int>(cpu.mmu.Read(addr)) == value);
             }
         }
+        CHECK(static_cast<int>(cyclesTaken) == cycles.size());
     }
 }
 

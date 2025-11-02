@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "cpu_cycles.h"
 #include "cpu_instructions.h"
 
 #include <functional>
@@ -521,6 +522,7 @@ void RelativeJump(Cpu& cpu)
     int8_t e = cpu.mmu.Read(++cpu.reg.pc);
     if (ConditionCheck<Cnd>(cpu))
     {
+        cpu.details.branchTaken = true;
         auto new_pc = cpu.reg.pc + e;
         cpu.reg.pc = new_pc;
     }
@@ -535,6 +537,7 @@ void Jump(Cpu& cpu)
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
+        cpu.details.branchTaken = true;
         cpu.reg.pc = ToWord(hibyte,lobyte);
     }
 }
@@ -553,6 +556,7 @@ void Call(Cpu& cpu)
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
+        cpu.details.branchTaken = true;
         auto nn = ToWord(hibyte, lobyte);
         cpu.mmu.Write(--cpu.reg.sp, Msb(cpu.reg.pc));
         cpu.mmu.Write(--cpu.reg.sp, Lsb(cpu.reg.pc));
@@ -566,6 +570,7 @@ void Ret(Cpu& cpu)
     ++cpu.reg.pc;
     if (ConditionCheck<Cnd>(cpu))
     {
+        cpu.details.branchTaken = true;
         auto lobyte = cpu.mmu.Read(cpu.reg.sp++);
         auto hibyte = cpu.mmu.Read(cpu.reg.sp++);
         cpu.reg.pc = ToWord(hibyte, lobyte);
@@ -1023,13 +1028,27 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     ::SET<6,R::B>, ::SET<6,R::C>, ::SET<6,R::D>, ::SET<6,R::E>, ::SET<6,R::H>, ::SET<6,R::L>, ::SET<6,R::IHL>, ::SET<6,R::A>,  ::SET<7,R::B>, ::SET<7,R::C>, ::SET<7,R::D>, ::SET<7,R::E>, ::SET<7,R::H>, ::SET<7,R::L>, ::SET<7,R::IHL>, ::SET<7,R::A>,
 };
 
-void CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
+int CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
 {
+    CpuDetails& details = cpu.details;
+    details.cbInstructionCycles = 0;
+    details.branchTaken = false;
+
     s_Instructions[opcode](cpu);
+    if (details.cbInstructionCycles != 0)
+    {
+        return details.cbInstructionCycles;
+    }
+    if (details.branchTaken)
+    {
+        return s_ConditionalOpCodeCycles[opcode];
+    }
+    return s_OpCodeCycles[opcode];
 }
 
 void CbOp(Cpu& cpu)
 {
     uint8_t cbOpcode = cpu.mmu.Read(++cpu.reg.pc);
+    cpu.details.cbInstructionCycles = s_CbOpcodeCycles[cbOpcode];
     s_CbInstructions[cbOpcode](cpu);
 }

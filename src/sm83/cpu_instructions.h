@@ -6,5 +6,5 @@ class Cpu;
 
 class CpuInstructions {
 public:
-    static void Execute(Cpu& cpu, uint8_t opcode);
+    static int Execute(Cpu& cpu, uint8_t opcode);
 };

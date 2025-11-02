@@ -6,15 +6,15 @@
 #include <format>
 #include <fstream>
 
-void Cpu::Execute(uint8_t opcode)
+int Cpu::Execute(uint8_t opcode)
 {
     return CpuInstructions::Execute(*this, opcode);
 }
 
-void Cpu::Step()
+int Cpu::Step()
 {
     auto opcode = mmu.Read(reg.pc);
-    Execute(opcode);
+    return Execute(opcode);
 }
 
 namespace {
