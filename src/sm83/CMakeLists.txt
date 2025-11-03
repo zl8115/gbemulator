@@ -4,13 +4,17 @@ add_library(Sm83 STATIC
     cpu_cycles.h
     cpu_instructions.h
     mmu.h
+    ppu.h
     registers.h
+    soc.h
 
     cpu.cpp
     cpu_cycles.cpp
     cpu_instructions.cpp
     mmu.cpp
-    registers.cpp)
+    ppu.cpp
+    registers.cpp
+    soc.cpp)
 target_include_directories(
     Sm83
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

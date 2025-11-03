@@ -1,4 +1,4 @@
-#include "cpu.h"
+#include "soc.h"
 #include "tester.h"
 
 #include <nlohmann/json.hpp>
@@ -16,21 +16,21 @@ using json = nlohmann::json;
 
 namespace {
 
-Cpu load_state(const json& initial)
+Soc load_state(const json& initial)
 {
-    Cpu cpu;
-    cpu.ime = initial.value<std::uint8_t>("ime", 0);
-    cpu.ie = initial.value<std::uint8_t>("ie", 0);
-    cpu.reg.a = initial.value<std::uint8_t>("a", 0);
-    cpu.reg.b = initial.value<std::uint8_t>("b", 0);
-    cpu.reg.c = initial.value<std::uint8_t>("c", 0);
-    cpu.reg.d = initial.value<std::uint8_t>("d", 0);
-    cpu.reg.e = initial.value<std::uint8_t>("e", 0);
-    cpu.reg.f = initial.value<std::uint8_t>("f", 0);
-    cpu.reg.h = initial.value<std::uint8_t>("h", 0);
-    cpu.reg.l = initial.value<std::uint8_t>("l", 0);
-    cpu.reg.pc = initial.value<std::uint16_t>("pc", 0);
-    cpu.reg.sp = initial.value<std::uint16_t>("sp", 0);
+    Soc soc;
+    soc.m_mmu.ime = initial.value<std::uint8_t>("ime", 0);
+    soc.m_mmu.ie = initial.value<std::uint8_t>("ie", 0);
+    soc.m_reg.a = initial.value<std::uint8_t>("a", 0);
+    soc.m_reg.b = initial.value<std::uint8_t>("b", 0);
+    soc.m_reg.c = initial.value<std::uint8_t>("c", 0);
+    soc.m_reg.d = initial.value<std::uint8_t>("d", 0);
+    soc.m_reg.e = initial.value<std::uint8_t>("e", 0);
+    soc.m_reg.f = initial.value<std::uint8_t>("f", 0);
+    soc.m_reg.h = initial.value<std::uint8_t>("h", 0);
+    soc.m_reg.l = initial.value<std::uint8_t>("l", 0);
+    soc.m_reg.pc = initial.value<std::uint16_t>("pc", 0);
+    soc.m_reg.sp = initial.value<std::uint16_t>("sp", 0);
     if (initial.contains("ram"))
     {
         int addr = 0;
@@ -39,28 +39,28 @@ Cpu load_state(const json& initial)
         {
             addr = v.at(0).get<int>();
             value = v.at(1).get<int>();
-            cpu.mmu.Write(addr, value);
+            soc.m_mmu.Write(addr, value);
         }
     }
 
-    return cpu;
+    return soc;
 }
 
-bool check_final_state(const Cpu& cpu, json final)
+bool check_final_state(const Soc& soc, json final)
 {
     bool hasFailures = false;
-    hasFailures |= cpu.ime != final.value<std::uint8_t>("ime", 0);
-    hasFailures |= cpu.ei != final.value<std::uint8_t>("ei", 0);
-    hasFailures |= cpu.reg.a != final.value<std::uint8_t>("a", 0);
-    hasFailures |= cpu.reg.b != final.value<std::uint8_t>("b", 0);
-    hasFailures |= cpu.reg.c != final.value<std::uint8_t>("c", 0);
-    hasFailures |= cpu.reg.d != final.value<std::uint8_t>("d", 0);
-    hasFailures |= cpu.reg.e != final.value<std::uint8_t>("e", 0);
-    hasFailures |= cpu.reg.f != final.value<std::uint8_t>("f", 0);
-    hasFailures |= cpu.reg.h != final.value<std::uint8_t>("h", 0);
-    hasFailures |= cpu.reg.l != final.value<std::uint8_t>("l", 0);
-    hasFailures |= cpu.reg.pc != final.value<std::uint16_t>("pc", 0);
-    hasFailures |= cpu.reg.sp != final.value<std::uint16_t>("sp", 0);
+    hasFailures |= soc.m_mmu.ime != final.value<std::uint8_t>("ime", 0);
+    hasFailures |= soc.m_mmu.ei != final.value<std::uint8_t>("ei", 0);
+    hasFailures |= soc.m_reg.a != final.value<std::uint8_t>("a", 0);
+    hasFailures |= soc.m_reg.b != final.value<std::uint8_t>("b", 0);
+    hasFailures |= soc.m_reg.c != final.value<std::uint8_t>("c", 0);
+    hasFailures |= soc.m_reg.d != final.value<std::uint8_t>("d", 0);
+    hasFailures |= soc.m_reg.e != final.value<std::uint8_t>("e", 0);
+    hasFailures |= soc.m_reg.f != final.value<std::uint8_t>("f", 0);
+    hasFailures |= soc.m_reg.h != final.value<std::uint8_t>("h", 0);
+    hasFailures |= soc.m_reg.l != final.value<std::uint8_t>("l", 0);
+    hasFailures |= soc.m_reg.pc != final.value<std::uint16_t>("pc", 0);
+    hasFailures |= soc.m_reg.sp != final.value<std::uint16_t>("sp", 0);
     if (final.contains("ram"))
     {
         int addr = 0;
@@ -69,7 +69,7 @@ bool check_final_state(const Cpu& cpu, json final)
         {
             addr = v.at(0).get<int>();
             value = v.at(1).get<int>();
-            hasFailures |= cpu.mmu.Read(addr) != value;
+            hasFailures |= soc.m_mmu.Read(addr) != value;
         }
     }
 
@@ -84,11 +84,11 @@ bool test_case_will_pass(const json& test_case)
     const auto& initial = test_case["initial"];
     const auto& final = test_case["final"];
     const auto& cycles = test_case["cycles"];
-    Cpu cpu = load_state(initial);
-    auto cyclesTaken = cpu.Step();
+    Soc soc = load_state(initial);
+    auto cyclesTaken = soc.Step();
     if (!skipCyclesCheck && cyclesTaken != cycles.size())
         return false;
-    return check_final_state(cpu, final);
+    return check_final_state(soc, final);
 }
 
 void run_dynamic_section_test(const json& test_case)
@@ -99,24 +99,24 @@ void run_dynamic_section_test(const json& test_case)
     const auto& cycles = test_case["cycles"];
     DYNAMIC_SECTION(name)
     {
-        Cpu cpu = load_state(initial);
-        auto cyclesTaken = cpu.Step();
+        Soc soc = load_state(initial);
+        auto cyclesTaken = soc.Step();
         INFO("Initial: " + nlohmann::to_string(initial));
         INFO("Final: " + nlohmann::to_string(final));
 
         // In the checks, we cast to int rather than uint8/16 to make the output comprehensible
-        CHECK(static_cast<int>(cpu.ime) == final.value<int>("ime", 0));
-        CHECK(static_cast<int>(cpu.ei) == final.value<int>("ei", 0));
-        CHECK(static_cast<int>(cpu.reg.a) == final.value<int>("a", 0));
-        CHECK(static_cast<int>(cpu.reg.b) == final.value<int>("b", 0));
-        CHECK(static_cast<int>(cpu.reg.c) == final.value<int>("c", 0));
-        CHECK(static_cast<int>(cpu.reg.d) == final.value<int>("d", 0));
-        CHECK(static_cast<int>(cpu.reg.e) == final.value<int>("e", 0));
-        CHECK(static_cast<int>(cpu.reg.f) == final.value<int>("f", 0));
-        CHECK(static_cast<int>(cpu.reg.h) == final.value<int>("h", 0));
-        CHECK(static_cast<int>(cpu.reg.l) == final.value<int>("l", 0));
-        CHECK(static_cast<int>(cpu.reg.pc) == final.value<int>("pc", 0));
-        CHECK(static_cast<int>(cpu.reg.sp) == final.value<int>("sp", 0));
+        CHECK(static_cast<int>(soc.m_mmu.ime) == final.value<int>("ime", 0));
+        CHECK(static_cast<int>(soc.m_mmu.ei) == final.value<int>("ei", 0));
+        CHECK(static_cast<int>(soc.m_reg.a) == final.value<int>("a", 0));
+        CHECK(static_cast<int>(soc.m_reg.b) == final.value<int>("b", 0));
+        CHECK(static_cast<int>(soc.m_reg.c) == final.value<int>("c", 0));
+        CHECK(static_cast<int>(soc.m_reg.d) == final.value<int>("d", 0));
+        CHECK(static_cast<int>(soc.m_reg.e) == final.value<int>("e", 0));
+        CHECK(static_cast<int>(soc.m_reg.f) == final.value<int>("f", 0));
+        CHECK(static_cast<int>(soc.m_reg.h) == final.value<int>("h", 0));
+        CHECK(static_cast<int>(soc.m_reg.l) == final.value<int>("l", 0));
+        CHECK(static_cast<int>(soc.m_reg.pc) == final.value<int>("pc", 0));
+        CHECK(static_cast<int>(soc.m_reg.sp) == final.value<int>("sp", 0));
         if (final.contains("ram"))
         {
             int addr = 0;
@@ -125,7 +125,7 @@ void run_dynamic_section_test(const json& test_case)
             {
                 addr = v.at(0).get<int>();
                 value = v.at(1).get<int>();
-                CHECK(static_cast<int>(cpu.mmu.Read(addr)) == value);
+                CHECK(static_cast<int>(soc.m_mmu.Read(addr)) == value);
             }
         }
         CHECK(static_cast<int>(cyclesTaken) == cycles.size());

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <format>
 
-#include "cpu.h"
+#include "soc.h"
 
 template<>
 struct std::formatter<Registers>: std::formatter<std::string> 
@@ -20,15 +20,15 @@ std::ostream& operator<<(std::ostream& os, Registers const& reg)
     return os << std::format("{}", reg);
 }
 
-std::ostream& operator<<(std::ostream& os, Cpu const& cpu)
+std::ostream& operator<<(std::ostream& os, Soc const& soc)
 {
-    return os << std::format("Registers: {}", cpu.reg);
+    return os << std::format("Registers: {}", soc.m_reg);
 }
 
 int main()
 {
-    Cpu cpu;
-    std::cout << cpu << std::endl;
-    cpu.Step();
-    std::cout << cpu << std::endl;
+    Soc soc;
+    std::cout << soc << std::endl;
+    soc.Step();
+    std::cout << soc << std::endl;
 }

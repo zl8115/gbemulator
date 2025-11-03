@@ -7,7 +7,7 @@
 Mmu::Mmu()
 {
     memset(&m_ram, 0, std::size(m_ram));
-    // memcpy(&m_ram, bootDMG.data(), std::size(bootDMG));
+    memcpy(&m_ram, bootDMG.data(), std::size(bootDMG));
 }
 
 uint8_t Mmu::Read(const uint16_t& address) const

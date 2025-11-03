@@ -1,10 +1,24 @@
 #pragma once
 
+#include "registers.h"
+#include "mmu.h"
+
 #include <stdint.h>
 
-class Cpu;
+struct CpuState
+{
+    Mmu& mmu;
+    Registers& reg;
+    bool branchTaken;   // flag is branch was taken
+    int cbOpCodeCycles; // cycles taken if the cb opcode prefix is taken
+};
 
-class CpuInstructions {
+class CpuInstructions
+{
 public:
-    static int Execute(Cpu& cpu, uint8_t opcode);
+    CpuInstructions(Mmu& mmu, Registers& reg);
+    int Execute(uint8_t opcode);
+
+private:
+    CpuState m_state;
 };

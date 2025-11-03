@@ -1,6 +1,5 @@
-#include "cpu.h"
-#include "cpu_cycles.h"
 #include "cpu_instructions.h"
+#include "cpu_cycles.h"
 
 #include <functional>
 #include <stdexcept>
@@ -81,808 +80,808 @@ namespace {
 
 /******************** Basic Memory Bus Functions ********************/
 
-inline uint8_t ReadFlags(Cpu& cpu) { return cpu.reg.f; }
+inline uint8_t ReadFlags(CpuState& state) { return state.reg.f; }
 
 // Forward declaration
-template <R Src> inline uint16_t ReadWord(Cpu& cpu) requires LargeReg<Src>;
-template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu);
+template <R Src> inline uint16_t ReadWord(CpuState& state) requires LargeReg<Src>;
+template <> inline uint16_t ReadWord<R::HL>(CpuState& state);
 
 template <R Src>
-inline uint8_t Read(Cpu& cpu) requires SmallReg<Src>;
-template <> inline uint8_t Read<R::A>(Cpu& cpu) { return cpu.reg.a; }
-template <> inline uint8_t Read<R::F>(Cpu& cpu) { return cpu.reg.f; }
-template <> inline uint8_t Read<R::B>(Cpu& cpu) { return cpu.reg.b; }
-template <> inline uint8_t Read<R::C>(Cpu& cpu) { return cpu.reg.c; }
-template <> inline uint8_t Read<R::D>(Cpu& cpu) { return cpu.reg.d; }
-template <> inline uint8_t Read<R::E>(Cpu& cpu) { return cpu.reg.e; }
-template <> inline uint8_t Read<R::H>(Cpu& cpu) { return cpu.reg.h; }
-template <> inline uint8_t Read<R::L>(Cpu& cpu) { return cpu.reg.l; }
-template <> inline uint8_t Read<R::N>(Cpu& cpu) { return cpu.mmu.Read(++cpu.reg.pc); }
-template <> inline uint8_t Read<R::IHL>(Cpu& cpu) { return cpu.mmu.Read(ReadWord<R::HL>(cpu)); }
+inline uint8_t Read(CpuState& state) requires SmallReg<Src>;
+template <> inline uint8_t Read<R::A>(CpuState& state) { return state.reg.a; }
+template <> inline uint8_t Read<R::F>(CpuState& state) { return state.reg.f; }
+template <> inline uint8_t Read<R::B>(CpuState& state) { return state.reg.b; }
+template <> inline uint8_t Read<R::C>(CpuState& state) { return state.reg.c; }
+template <> inline uint8_t Read<R::D>(CpuState& state) { return state.reg.d; }
+template <> inline uint8_t Read<R::E>(CpuState& state) { return state.reg.e; }
+template <> inline uint8_t Read<R::H>(CpuState& state) { return state.reg.h; }
+template <> inline uint8_t Read<R::L>(CpuState& state) { return state.reg.l; }
+template <> inline uint8_t Read<R::N>(CpuState& state) { return state.mmu.Read(++state.reg.pc); }
+template <> inline uint8_t Read<R::IHL>(CpuState& state) { return state.mmu.Read(ReadWord<R::HL>(state)); }
 
-template <> inline uint16_t ReadWord<R::AF>(Cpu& cpu) { return ToWord(Read<R::A>(cpu), Read<R::F>(cpu)); }
-template <> inline uint16_t ReadWord<R::BC>(Cpu& cpu) { return ToWord(Read<R::B>(cpu), Read<R::C>(cpu)); }
-template <> inline uint16_t ReadWord<R::DE>(Cpu& cpu) { return ToWord(Read<R::D>(cpu), Read<R::E>(cpu)); }
-template <> inline uint16_t ReadWord<R::HL>(Cpu& cpu) { return ToWord(Read<R::H>(cpu), Read<R::L>(cpu)); }
-template <> inline uint16_t ReadWord<R::SP>(Cpu& cpu) { return cpu.reg.sp; }
-template <> inline uint16_t ReadWord<R::NN>(Cpu& cpu) {
-    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
-    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
+template <> inline uint16_t ReadWord<R::AF>(CpuState& state) { return ToWord(Read<R::A>(state), Read<R::F>(state)); }
+template <> inline uint16_t ReadWord<R::BC>(CpuState& state) { return ToWord(Read<R::B>(state), Read<R::C>(state)); }
+template <> inline uint16_t ReadWord<R::DE>(CpuState& state) { return ToWord(Read<R::D>(state), Read<R::E>(state)); }
+template <> inline uint16_t ReadWord<R::HL>(CpuState& state) { return ToWord(Read<R::H>(state), Read<R::L>(state)); }
+template <> inline uint16_t ReadWord<R::SP>(CpuState& state) { return state.reg.sp; }
+template <> inline uint16_t ReadWord<R::NN>(CpuState& state) {
+    auto lobyte = state.mmu.Read(++state.reg.pc);
+    auto hibyte = state.mmu.Read(++state.reg.pc);
     return ToWord(hibyte, lobyte);
 }
 
 template <R Src>
-inline uint16_t ReadH(Cpu& cpu) requires HReg<Src>;
-template <> inline uint16_t ReadH<R::A>(Cpu& cpu) { return Read<R::A>(cpu); }
-template <> inline uint16_t ReadH<R::N>(Cpu& cpu) { return cpu.mmu.Read(ToWord(0xFF, Read<R::N>(cpu))); }
-template <> inline uint16_t ReadH<R::C>(Cpu& cpu) { return cpu.mmu.Read(ToWord(0xFF, Read<R::C>(cpu))); }
+inline uint16_t ReadH(CpuState& state) requires HReg<Src>;
+template <> inline uint16_t ReadH<R::A>(CpuState& state) { return Read<R::A>(state); }
+template <> inline uint16_t ReadH<R::N>(CpuState& state) { return state.mmu.Read(ToWord(0xFF, Read<R::N>(state))); }
+template <> inline uint16_t ReadH<R::C>(CpuState& state) { return state.mmu.Read(ToWord(0xFF, Read<R::C>(state))); }
 
 template <R Dst>
-inline void Set(Cpu& cpu, uint8_t value) requires SmallReg<Dst>;
-template <> inline void Set<R::A>(Cpu& cpu, uint8_t value) { cpu.reg.a = value; }
-template <> inline void Set<R::F>(Cpu& cpu, uint8_t value) { cpu.reg.f = value & F::ALL; }
-template <> inline void Set<R::B>(Cpu& cpu, uint8_t value) { cpu.reg.b = value; }
-template <> inline void Set<R::C>(Cpu& cpu, uint8_t value) { cpu.reg.c = value; }
-template <> inline void Set<R::D>(Cpu& cpu, uint8_t value) { cpu.reg.d = value; }
-template <> inline void Set<R::E>(Cpu& cpu, uint8_t value) { cpu.reg.e = value; }
-template <> inline void Set<R::H>(Cpu& cpu, uint8_t value) { cpu.reg.h = value; }
-template <> inline void Set<R::L>(Cpu& cpu, uint8_t value) { cpu.reg.l = value; }
-template <> inline void Set<R::IHL>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ReadWord<R::HL>(cpu), value); }
+inline void Set(CpuState& state, uint8_t value) requires SmallReg<Dst>;
+template <> inline void Set<R::A>(CpuState& state, uint8_t value) { state.reg.a = value; }
+template <> inline void Set<R::F>(CpuState& state, uint8_t value) { state.reg.f = value & F::ALL; }
+template <> inline void Set<R::B>(CpuState& state, uint8_t value) { state.reg.b = value; }
+template <> inline void Set<R::C>(CpuState& state, uint8_t value) { state.reg.c = value; }
+template <> inline void Set<R::D>(CpuState& state, uint8_t value) { state.reg.d = value; }
+template <> inline void Set<R::E>(CpuState& state, uint8_t value) { state.reg.e = value; }
+template <> inline void Set<R::H>(CpuState& state, uint8_t value) { state.reg.h = value; }
+template <> inline void Set<R::L>(CpuState& state, uint8_t value) { state.reg.l = value; }
+template <> inline void Set<R::IHL>(CpuState& state, uint8_t value) { state.mmu.Write(ReadWord<R::HL>(state), value); }
 
 template <R Dst>
-inline void SetWord(Cpu& cpu, uint16_t value) requires LargeReg<Dst>;
-template <> inline void SetWord<R::AF>(Cpu& cpu, uint16_t value) { Set<R::A>(cpu, Msb(value)); Set<R::F>(cpu, Lsb(value)); }
-template <> inline void SetWord<R::BC>(Cpu& cpu, uint16_t value) { Set<R::B>(cpu, Msb(value)); Set<R::C>(cpu, Lsb(value)); }
-template <> inline void SetWord<R::DE>(Cpu& cpu, uint16_t value) { Set<R::D>(cpu, Msb(value)); Set<R::E>(cpu, Lsb(value)); }
-template <> inline void SetWord<R::HL>(Cpu& cpu, uint16_t value) { Set<R::H>(cpu, Msb(value)); Set<R::L>(cpu, Lsb(value)); }
-template <> inline void SetWord<R::SP>(Cpu& cpu, uint16_t value) { cpu.reg.sp = value; }
-template <> inline void SetWord<R::NN>(Cpu& cpu, uint16_t value) {
-    auto nn = ReadWord<R::NN>(cpu);
-    cpu.mmu.Write(nn, Lsb(value));
-    cpu.mmu.Write(++nn, Msb(value));
+inline void SetWord(CpuState& state, uint16_t value) requires LargeReg<Dst>;
+template <> inline void SetWord<R::AF>(CpuState& state, uint16_t value) { Set<R::A>(state, Msb(value)); Set<R::F>(state, Lsb(value)); }
+template <> inline void SetWord<R::BC>(CpuState& state, uint16_t value) { Set<R::B>(state, Msb(value)); Set<R::C>(state, Lsb(value)); }
+template <> inline void SetWord<R::DE>(CpuState& state, uint16_t value) { Set<R::D>(state, Msb(value)); Set<R::E>(state, Lsb(value)); }
+template <> inline void SetWord<R::HL>(CpuState& state, uint16_t value) { Set<R::H>(state, Msb(value)); Set<R::L>(state, Lsb(value)); }
+template <> inline void SetWord<R::SP>(CpuState& state, uint16_t value) { state.reg.sp = value; }
+template <> inline void SetWord<R::NN>(CpuState& state, uint16_t value) {
+    auto nn = ReadWord<R::NN>(state);
+    state.mmu.Write(nn, Lsb(value));
+    state.mmu.Write(++nn, Msb(value));
 }
 
 template <R Src>
-inline void SetH(Cpu& cpu, uint8_t value) requires HReg<Src>;
-template <> inline void SetH<R::A>(Cpu& cpu, uint8_t value) { Set<R::A>(cpu, value); }
-template <> inline void SetH<R::N>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ToWord(0xFF, Read<R::N>(cpu)), value); }
-template <> inline void SetH<R::C>(Cpu& cpu, uint8_t value) { cpu.mmu.Write(ToWord(0xFF, Read<R::C>(cpu)), value); }
+inline void SetH(CpuState& state, uint8_t value) requires HReg<Src>;
+template <> inline void SetH<R::A>(CpuState& state, uint8_t value) { Set<R::A>(state, value); }
+template <> inline void SetH<R::N>(CpuState& state, uint8_t value) { state.mmu.Write(ToWord(0xFF, Read<R::N>(state)), value); }
+template <> inline void SetH<R::C>(CpuState& state, uint8_t value) { state.mmu.Write(ToWord(0xFF, Read<R::C>(state)), value); }
 
 /******************** Condition Check Functions ********************/
 
 template <C Cnd>
-inline bool ConditionCheck(Cpu& cpu);
-template <> inline bool ConditionCheck<C::NONE>(Cpu& cpu) { return true; }
-template <> inline bool ConditionCheck<C::NZ>(Cpu& cpu) { return !(cpu.reg.f & F::ZERO_FLAG); }
-template <> inline bool ConditionCheck<C::NC>(Cpu& cpu) { return !(cpu.reg.f & F::CARRY_FLAG); }
-template <> inline bool ConditionCheck<C::Z>(Cpu& cpu) { return cpu.reg.f & F::ZERO_FLAG; }
-template <> inline bool ConditionCheck<C::C>(Cpu& cpu) { return cpu.reg.f & F::CARRY_FLAG; }
+inline bool ConditionCheck(CpuState& state);
+template <> inline bool ConditionCheck<C::NONE>(CpuState& state) { return true; }
+template <> inline bool ConditionCheck<C::NZ>(CpuState& state) { return !(state.reg.f & F::ZERO_FLAG); }
+template <> inline bool ConditionCheck<C::NC>(CpuState& state) { return !(state.reg.f & F::CARRY_FLAG); }
+template <> inline bool ConditionCheck<C::Z>(CpuState& state) { return state.reg.f & F::ZERO_FLAG; }
+template <> inline bool ConditionCheck<C::C>(CpuState& state) { return state.reg.f & F::CARRY_FLAG; }
 
 /******************** Cpu Instructions ********************/
 /*     ************** Registry Ops *************     */
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Load(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    Set<Dst>(cpu, Read<Src>(cpu));
-    ++cpu.reg.pc;
+    Set<Dst>(state, Read<Src>(state));
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires LargeReg<Dst> && LargeReg<Src>
+void Load(CpuState& state) requires LargeReg<Dst> && LargeReg<Src>
 {
-    SetWord<Dst>(cpu, ReadWord<Src>(cpu));
-    ++cpu.reg.pc;
+    SetWord<Dst>(state, ReadWord<Src>(state));
+    ++state.reg.pc;
 }
 
 // Indirect Load
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires SmallReg<Dst> && LargeReg<Src>
+void Load(CpuState& state) requires SmallReg<Dst> && LargeReg<Src>
 {
-    auto addr = ReadWord<Src>(cpu);
-    Set<Dst>(cpu, cpu.mmu.Read(addr));
-    ++cpu.reg.pc;
+    auto addr = ReadWord<Src>(state);
+    Set<Dst>(state, state.mmu.Read(addr));
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires LargeReg<Dst> && SmallReg<Src>
+void Load(CpuState& state) requires LargeReg<Dst> && SmallReg<Src>
 {
-    auto addr = ReadWord<Dst>(cpu);
-    cpu.mmu.Write(addr, Read<Src>(cpu));
-    ++cpu.reg.pc;
+    auto addr = ReadWord<Dst>(state);
+    state.mmu.Write(addr, Read<Src>(state));
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires IncDecReg<Dst> && SmallReg<Src>
+void Load(CpuState& state) requires IncDecReg<Dst> && SmallReg<Src>
 {
-    Load<R::HL, Src>(cpu);
+    Load<R::HL, Src>(state);
     if constexpr(Dst == R::HLI)
     {
-        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) + 1);
+        SetWord<R::HL>(state, ReadWord<R::HL>(state) + 1);
     }
     else if constexpr(Dst == R::HLD)
     {
-        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) - 1);
+        SetWord<R::HL>(state, ReadWord<R::HL>(state) - 1);
     }
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires SmallReg<Dst> && IncDecReg<Src>
+void Load(CpuState& state) requires SmallReg<Dst> && IncDecReg<Src>
 {
-    Load<Dst, R::HL>(cpu);
+    Load<Dst, R::HL>(state);
     if constexpr(Src == R::HLI)
     {
-        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) + 1);
+        SetWord<R::HL>(state, ReadWord<R::HL>(state) + 1);
     }
     else if constexpr(Src == R::HLD)
     {
-        SetWord<R::HL>(cpu, ReadWord<R::HL>(cpu) - 1);
+        SetWord<R::HL>(state, ReadWord<R::HL>(state) - 1);
     }
 }
 
 template <R Dst, R Src>
-void Load(Cpu& cpu) requires (Dst == R::HL && Src == R::SPe)
+void Load(CpuState& state) requires (Dst == R::HL && Src == R::SPe)
 {
-    auto e = static_cast<int16_t>(static_cast<int8_t>(Read<R::N>(cpu)));
-    uint16_t ori_value = cpu.reg.sp;
+    auto e = static_cast<int16_t>(static_cast<int8_t>(Read<R::N>(state)));
+    uint16_t ori_value = state.reg.sp;
     uint16_t new_value = ori_value + e;
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (((ori_value & 0xF) + (e & 0xF)) & 0x10)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (((ori_value & 0xFF) + (e & 0xFF)) & 0x100)
-        cpu.reg.f |= F::CARRY_FLAG;
-    SetWord<R::HL>(cpu, new_value);
-    ++cpu.reg.pc;
+        state.reg.f |= F::CARRY_FLAG;
+    SetWord<R::HL>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void LoadH(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void LoadH(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    SetH<Dst>(cpu, ReadH<Src>(cpu));
-    ++cpu.reg.pc;
+    SetH<Dst>(state, ReadH<Src>(state));
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Add(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
+void Add(CpuState& state, uint8_t value) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value + value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) + (value & 0xF) > 0xF)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (new_value < ori_value)
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Add(Cpu& cpu, uint16_t value) requires LargeReg<Dst>
+void Add(CpuState& state, uint16_t value) requires LargeReg<Dst>
 {
-    auto ori_value = ReadWord<Dst>(cpu);
+    auto ori_value = ReadWord<Dst>(state);
     uint16_t new_value = ori_value + value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG | F:: CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG | F:: CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xFFF) + (value & 0xFFF) > 0xFFF)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (new_value < ori_value)
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
 
-    SetWord<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    SetWord<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Add(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Add(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    Add<Dst>(cpu, Read<Src>(cpu));
+    Add<Dst>(state, Read<Src>(state));
 }
 
 template <R Dst, R Src>
-void Add(Cpu& cpu) requires LargeReg<Dst> && LargeReg<Src>
+void Add(CpuState& state) requires LargeReg<Dst> && LargeReg<Src>
 {
-    Add<Dst>(cpu, ReadWord<Src>(cpu));
+    Add<Dst>(state, ReadWord<Src>(state));
 }
 
 template <R Dst, R Src>
-void Add(Cpu& cpu) requires (Dst == R::SP) && (Src == R::Ne)
+void Add(CpuState& state) requires (Dst == R::SP) && (Src == R::Ne)
 {
-    auto e = static_cast<int16_t>(static_cast<int8_t>(Read<R::N>(cpu)));
-    uint16_t ori_value = cpu.reg.sp;
+    auto e = static_cast<int16_t>(static_cast<int8_t>(Read<R::N>(state)));
+    uint16_t ori_value = state.reg.sp;
     uint16_t new_value = ori_value + e;
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (((ori_value & 0xF) + (e & 0xF)) & 0x10)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (((ori_value & 0xFF) + (e & 0xFF)) & 0x100)
-        cpu.reg.f |= F::CARRY_FLAG;
-    cpu.reg.sp = new_value;
-    ++cpu.reg.pc;
+        state.reg.f |= F::CARRY_FLAG;
+    state.reg.sp = new_value;
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Adc(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Adc(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t carry = (cpu.reg.f & F::CARRY_FLAG) ? 1 : 0;
-    uint8_t value = Read<Src>(cpu);
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t carry = (state.reg.f & F::CARRY_FLAG) ? 1 : 0;
+    uint8_t value = Read<Src>(state);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value + value + carry;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) + (value & 0xF) + carry > 0xF)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (new_value - carry < ori_value)
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Inc(Cpu& cpu) requires SmallReg<Dst>
+void Inc(CpuState& state) requires SmallReg<Dst>
 {
     constexpr uint8_t value = 1;
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value + value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) + value > 0xF)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Inc(Cpu& cpu) requires LargeReg<Dst>
+void Inc(CpuState& state) requires LargeReg<Dst>
 {
-    SetWord<Dst>(cpu, ReadWord<Dst>(cpu) + 1);
-    ++cpu.reg.pc;
+    SetWord<Dst>(state, ReadWord<Dst>(state) + 1);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Sub(Cpu& cpu, uint8_t value) requires SmallReg<Dst>
+void Sub(CpuState& state, uint8_t value) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value - value;
 
-    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
-    cpu.reg.f |= F::NEGATE_FLAG;
+    state.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) < (value & 0xF))
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (ori_value < new_value)
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Sub(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Sub(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    Sub<Dst>(cpu, Read<Src>(cpu));
+    Sub<Dst>(state, Read<Src>(state));
 }
 
 template <R Dst, R Src>
-void Sbc(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Sbc(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t value = Read<Src>(cpu);
-    uint8_t carry = (cpu.reg.f & F::CARRY_FLAG) ? 1 : 0;
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = Read<Src>(state);
+    uint8_t carry = (state.reg.f & F::CARRY_FLAG) ? 1 : 0;
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value - value - carry;
 
-    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
-    cpu.reg.f |= F::NEGATE_FLAG;
+    state.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) < (value & 0xF) + carry)
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (ori_value < new_value + carry)
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Dec(Cpu& cpu) requires SmallReg<Dst>
+void Dec(CpuState& state) requires SmallReg<Dst>
 {
     constexpr uint8_t value = 1;
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value - value;
 
-    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG);
-    cpu.reg.f |= F::NEGATE_FLAG;
+    state.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG);
+    state.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) < (value & 0xF))
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Dec(Cpu& cpu) requires LargeReg<Dst>
+void Dec(CpuState& state) requires LargeReg<Dst>
 {
-    SetWord<Dst>(cpu, ReadWord<Dst>(cpu) - 1);
-    ++cpu.reg.pc;
+    SetWord<Dst>(state, ReadWord<Dst>(state) - 1);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void And(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void And(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t value = Read<Src>(cpu);
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = Read<Src>(state);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value & value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::CARRY_FLAG);
-    cpu.reg.f |= F::HALF_CARRY_FLAG;
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::CARRY_FLAG);
+    state.reg.f |= F::HALF_CARRY_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+        state.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Xor(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Xor(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t value = Read<Src>(cpu);
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = Read<Src>(state);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value ^ value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+        state.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Or(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Or(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t value = Read<Src>(cpu);
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = Read<Src>(state);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value | value;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+        state.reg.f |= F::ZERO_FLAG;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template <R Dst, R Src>
-void Cp(Cpu& cpu) requires SmallReg<Dst> && SmallReg<Src>
+void Cp(CpuState& state) requires SmallReg<Dst> && SmallReg<Src>
 {
-    uint8_t value = Read<Src>(cpu);
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t value = Read<Src>(state);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t new_value = ori_value - value;
 
-    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
-    cpu.reg.f |= F::NEGATE_FLAG;
+    state.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f |= F::NEGATE_FLAG;
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
 
     if ((ori_value & 0xF) < (value & 0xF))
-        cpu.reg.f |= F::HALF_CARRY_FLAG;
+        state.reg.f |= F::HALF_CARRY_FLAG;
 
     if (ori_value < new_value)
-        cpu.reg.f |= F::CARRY_FLAG;
-    ++cpu.reg.pc;
+        state.reg.f |= F::CARRY_FLAG;
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Pop(Cpu& cpu) requires LargeReg<Dst>
+void Pop(CpuState& state) requires LargeReg<Dst>
 {
-    auto lobyte = cpu.mmu.Read(cpu.reg.sp++);
-    auto hibyte = cpu.mmu.Read(cpu.reg.sp++);;
-    SetWord<Dst>(cpu, ToWord(hibyte, lobyte));
-    ++cpu.reg.pc;
+    auto lobyte = state.mmu.Read(state.reg.sp++);
+    auto hibyte = state.mmu.Read(state.reg.sp++);;
+    SetWord<Dst>(state, ToWord(hibyte, lobyte));
+    ++state.reg.pc;
 }
 
 template <R Dst>
-void Push(Cpu& cpu) requires LargeReg<Dst>
+void Push(CpuState& state) requires LargeReg<Dst>
 {
-    auto data = ReadWord<Dst>(cpu);
-    cpu.mmu.Write(--cpu.reg.sp, Msb(data));
-    cpu.mmu.Write(--cpu.reg.sp, Lsb(data));
-    ++cpu.reg.pc;
+    auto data = ReadWord<Dst>(state);
+    state.mmu.Write(--state.reg.sp, Msb(data));
+    state.mmu.Write(--state.reg.sp, Lsb(data));
+    ++state.reg.pc;
 }
 
 /*     ************** Conditional Ops *************     */
 template <C Cnd>
-void RelativeJump(Cpu& cpu)
+void RelativeJump(CpuState& state)
 {
-    int8_t e = cpu.mmu.Read(++cpu.reg.pc);
-    if (ConditionCheck<Cnd>(cpu))
+    int8_t e = state.mmu.Read(++state.reg.pc);
+    if (ConditionCheck<Cnd>(state))
     {
-        cpu.details.branchTaken = true;
-        auto new_pc = cpu.reg.pc + e;
-        cpu.reg.pc = new_pc;
+        state.branchTaken = true;
+        auto new_pc = state.reg.pc + e;
+        state.reg.pc = new_pc;
     }
-    ++cpu.reg.pc;
+    ++state.reg.pc;
 }
 
 template <C Cnd>
-void Jump(Cpu& cpu)
+void Jump(CpuState& state)
 {
-    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
-    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
-    ++cpu.reg.pc;
-    if (ConditionCheck<Cnd>(cpu))
+    auto lobyte = state.mmu.Read(++state.reg.pc);
+    auto hibyte = state.mmu.Read(++state.reg.pc);
+    ++state.reg.pc;
+    if (ConditionCheck<Cnd>(state))
     {
-        cpu.details.branchTaken = true;
-        cpu.reg.pc = ToWord(hibyte,lobyte);
+        state.branchTaken = true;
+        state.reg.pc = ToWord(hibyte,lobyte);
     }
 }
 
 template <R Dst>
-void Jump(Cpu& cpu) requires (Dst == R::HL)
+void Jump(CpuState& state) requires (Dst == R::HL)
 {
-    cpu.reg.pc = ReadWord<R::HL>(cpu);
+    state.reg.pc = ReadWord<R::HL>(state);
 }
 
 template <C Cnd>
-void Call(Cpu& cpu)
+void Call(CpuState& state)
 {
-    auto lobyte = cpu.mmu.Read(++cpu.reg.pc);
-    auto hibyte = cpu.mmu.Read(++cpu.reg.pc);
-    ++cpu.reg.pc;
-    if (ConditionCheck<Cnd>(cpu))
+    auto lobyte = state.mmu.Read(++state.reg.pc);
+    auto hibyte = state.mmu.Read(++state.reg.pc);
+    ++state.reg.pc;
+    if (ConditionCheck<Cnd>(state))
     {
-        cpu.details.branchTaken = true;
+        state.branchTaken = true;
         auto nn = ToWord(hibyte, lobyte);
-        cpu.mmu.Write(--cpu.reg.sp, Msb(cpu.reg.pc));
-        cpu.mmu.Write(--cpu.reg.sp, Lsb(cpu.reg.pc));
-        cpu.reg.pc = nn;
+        state.mmu.Write(--state.reg.sp, Msb(state.reg.pc));
+        state.mmu.Write(--state.reg.sp, Lsb(state.reg.pc));
+        state.reg.pc = nn;
     }
 }
 
 template <C Cnd>
-void Ret(Cpu& cpu)
+void Ret(CpuState& state)
 {
-    ++cpu.reg.pc;
-    if (ConditionCheck<Cnd>(cpu))
+    ++state.reg.pc;
+    if (ConditionCheck<Cnd>(state))
     {
-        cpu.details.branchTaken = true;
-        auto lobyte = cpu.mmu.Read(cpu.reg.sp++);
-        auto hibyte = cpu.mmu.Read(cpu.reg.sp++);
-        cpu.reg.pc = ToWord(hibyte, lobyte);
+        state.branchTaken = true;
+        auto lobyte = state.mmu.Read(state.reg.sp++);
+        auto hibyte = state.mmu.Read(state.reg.sp++);
+        state.reg.pc = ToWord(hibyte, lobyte);
     }
 }
 
 /*     ************** Opcode Ops *************     */
 template <uint8_t Op>
-void Rst(Cpu& cpu)
+void Rst(CpuState& state)
 {
-    ++cpu.reg.pc;
-    cpu.mmu.Write(--cpu.reg.sp, Msb(cpu.reg.pc));
-    cpu.mmu.Write(--cpu.reg.sp, Lsb(cpu.reg.pc));
-    cpu.reg.pc = Op;
+    ++state.reg.pc;
+    state.mmu.Write(--state.reg.sp, Msb(state.reg.pc));
+    state.mmu.Write(--state.reg.sp, Lsb(state.reg.pc));
+    state.reg.pc = Op;
 }
 
 
 /*     ************** Normal Ops *************     */
-void Undef(Cpu& cpu)
+void Undef(CpuState& state)
 {
     throw std::runtime_error("Undefined opcode");
 }
 
-void Noop(Cpu& cpu)
+void Noop(CpuState& state)
 {
-    ++cpu.reg.pc;
+    ++state.reg.pc;
 }
 
-void Stop(Cpu& cpu)
+void Stop(CpuState& state)
 {
     // TODO: Properly implement
-    cpu.ime = 0;
-    ++cpu.reg.pc;
+    state.mmu.ime = 0;
+    ++state.reg.pc;
 }
 
-void Halt(Cpu& cpu)
+void Halt(CpuState& state)
 {
     constexpr int interrupt_flag = 0;     // TODO: Properly implement
 
-    if ((cpu.ime == 0) && (cpu.ie & interrupt_flag) != 0)
+    if ((state.mmu.ime == 0) && (state.mmu.ie & interrupt_flag) != 0)
       return;
-    ++cpu.reg.pc;
+    ++state.reg.pc;
 }
 
 /*     ************** Bit Ops *************     */
-void RLCA(Cpu& cpu)
+void RLCA(CpuState& state)
 {
-    cpu.reg.f &= ~(F::ALL);
-    uint8_t b7 = (cpu.reg.a >> 7) & 1;
+    state.reg.f &= ~(F::ALL);
+    uint8_t b7 = (state.reg.a >> 7) & 1;
     if (b7)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    uint8_t value = cpu.reg.a << 1 | b7;
-    Set<R::A>(cpu, value);
-    ++cpu.reg.pc;
+    uint8_t value = state.reg.a << 1 | b7;
+    Set<R::A>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void RLC(Cpu& cpu) requires SmallReg<Dst>
+void RLC(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b7 = (ori_value >> 7) & 1;
 
     uint8_t value = ori_value << 1 | b7;
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (b7)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
-void RLA(Cpu& cpu)
+void RLA(CpuState& state)
 {
-    bool c = cpu.reg.f & F::CARRY_FLAG;
-    cpu.reg.f &= ~(F::ALL);
-    uint8_t b7 = (cpu.reg.a >> 7) & 1;
+    bool c = state.reg.f & F::CARRY_FLAG;
+    state.reg.f &= ~(F::ALL);
+    uint8_t b7 = (state.reg.a >> 7) & 1;
     if (b7)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    uint8_t value = cpu.reg.a << 1 | c;
-    Set<R::A>(cpu, value);
-    ++cpu.reg.pc;
+    uint8_t value = state.reg.a << 1 | c;
+    Set<R::A>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void RL(Cpu& cpu) requires SmallReg<Dst>
+void RL(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b7 = (ori_value >> 7) & 1;
 
-    bool c = cpu.reg.f & F::CARRY_FLAG;
+    bool c = state.reg.f & F::CARRY_FLAG;
     uint8_t value = ori_value << 1 | c;
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
     if (b7)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
-void RRCA(Cpu& cpu)
+void RRCA(CpuState& state)
 {
-    cpu.reg.f &= ~(F::ALL);
-    uint8_t b0 = cpu.reg.a & 0x1;
+    state.reg.f &= ~(F::ALL);
+    uint8_t b0 = state.reg.a & 0x1;
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    uint8_t value = cpu.reg.a >> 1 | (b0 << 7);
-    Set<R::A>(cpu, value);
-    ++cpu.reg.pc;
+    uint8_t value = state.reg.a >> 1 | (b0 << 7);
+    Set<R::A>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void RRC(Cpu& cpu) requires SmallReg<Dst>
+void RRC(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b0 = ori_value & 0x1;
     uint8_t value = ori_value >> 1 | (b0 << 7);
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
-void RRA(Cpu& cpu)
+void RRA(CpuState& state)
 {
-    bool c = cpu.reg.f & F::CARRY_FLAG;
-    cpu.reg.f &= ~(F::ALL);
-    uint8_t b0 = cpu.reg.a & 1;
+    bool c = state.reg.f & F::CARRY_FLAG;
+    state.reg.f &= ~(F::ALL);
+    uint8_t b0 = state.reg.a & 1;
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    uint8_t value = cpu.reg.a >> 1 | (c << 7);
-    Set<R::A>(cpu, value);
-    ++cpu.reg.pc;
+    uint8_t value = state.reg.a >> 1 | (c << 7);
+    Set<R::A>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void RR(Cpu& cpu) requires SmallReg<Dst>
+void RR(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b0 = ori_value & 1;
 
-    bool c = cpu.reg.f & F::CARRY_FLAG;
+    bool c = state.reg.f & F::CARRY_FLAG;
     uint8_t value = ori_value >> 1 | (c << 7);
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void SLA(Cpu& cpu)
+void SLA(CpuState& state)
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b7 = ori_value >> 7;
 
     uint8_t value = ori_value << 1;
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
     if (b7)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void SRA(Cpu& cpu)
+void SRA(CpuState& state)
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b0 = ori_value & 0x01;
     uint8_t b7 = ori_value & 0x80;
 
     uint8_t value = b7 | (ori_value >> 1);
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void Swap(Cpu& cpu) requires SmallReg<Dst>
+void Swap(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t value = (ori_value << 4) | (ori_value >> 4);
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
 template<R Dst>
-void SRL(Cpu& cpu) requires SmallReg<Dst>
+void SRL(CpuState& state) requires SmallReg<Dst>
 {
-    uint8_t ori_value = Read<Dst>(cpu);
+    uint8_t ori_value = Read<Dst>(state);
     uint8_t b0 = ori_value & 1;
     uint8_t value = (ori_value >> 1);
 
-    cpu.reg.f &= ~(F::ALL);
+    state.reg.f &= ~(F::ALL);
     if (value == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
     if (b0)
     {
-        cpu.reg.f |= F::CARRY_FLAG;
+        state.reg.f |= F::CARRY_FLAG;
     }
 
-    Set<Dst>(cpu, value);
-    ++cpu.reg.pc;
+    Set<Dst>(state, value);
+    ++state.reg.pc;
 }
 
 template<int Bit, R Dst>
-void BIT(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+void BIT(CpuState& state) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
 {
-    uint8_t value = Read<Dst>(cpu);
+    uint8_t value = Read<Dst>(state);
     constexpr uint8_t bitMask = 1 << Bit;
 
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG);
-    cpu.reg.f |= F::HALF_CARRY_FLAG;
+    state.reg.f &= ~(F::NEGATE_FLAG | F::ZERO_FLAG);
+    state.reg.f |= F::HALF_CARRY_FLAG;
     if ((value & bitMask) == 0)
     {
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     }
-    ++cpu.reg.pc;
+    ++state.reg.pc;
 }
 
 template<int Bit, R Dst>
-void RES(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+void RES(CpuState& state) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
 {
     constexpr uint8_t bitMask = 1 << Bit;
-    uint8_t new_value = Read<Dst>(cpu) & ~bitMask;
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    uint8_t new_value = Read<Dst>(state) & ~bitMask;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 template<int Bit, R Dst>
-void SET(Cpu& cpu) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
+void SET(CpuState& state) requires (Bit >= 0 && Bit < 8) && SmallReg<Dst>
 {
     constexpr uint8_t bitMask = 1 << Bit;
-    uint8_t new_value = Read<Dst>(cpu) | bitMask;
-    Set<Dst>(cpu, new_value);
-    ++cpu.reg.pc;
+    uint8_t new_value = Read<Dst>(state) | bitMask;
+    Set<Dst>(state, new_value);
+    ++state.reg.pc;
 }
 
 /*     ************** Arithmetic/Logical Ops *************     */
-void DAA(Cpu& cpu)
+void DAA(CpuState& state)
 {
-    uint8_t ori_value = Read<R::A>(cpu);
-    uint8_t ori_flags = ReadFlags(cpu);
+    uint8_t ori_value = Read<R::A>(state);
+    uint8_t ori_flags = ReadFlags(state);
     bool isNegate = ori_flags & F::NEGATE_FLAG;
     bool isHalfCarry = ori_flags & F::HALF_CARRY_FLAG;
     bool isCarry = ori_flags & F::CARRY_FLAG;
@@ -901,64 +900,64 @@ void DAA(Cpu& cpu)
     }
 
     uint8_t new_value = isNegate ? ori_value - offset : ori_value + offset;
-    cpu.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
+    state.reg.f &= ~(F::ZERO_FLAG | F::HALF_CARRY_FLAG | F::CARRY_FLAG);
     if (new_value == 0)
-        cpu.reg.f |= F::ZERO_FLAG;
+        state.reg.f |= F::ZERO_FLAG;
     if (shouldCarry)
-        cpu.reg.f |= F::CARRY_FLAG;
-    Set<R::A>(cpu, new_value);
-    ++cpu.reg.pc;
+        state.reg.f |= F::CARRY_FLAG;
+    Set<R::A>(state, new_value);
+    ++state.reg.pc;
 }
 
-void CPL(Cpu& cpu)
+void CPL(CpuState& state)
 {
-    Set<R::A>(cpu, ~Read<R::A>(cpu));
-    cpu.reg.f |= F::NEGATE_FLAG;
-    cpu.reg.f |= F::HALF_CARRY_FLAG;
-    ++cpu.reg.pc;
+    Set<R::A>(state, ~Read<R::A>(state));
+    state.reg.f |= F::NEGATE_FLAG;
+    state.reg.f |= F::HALF_CARRY_FLAG;
+    ++state.reg.pc;
 }
 
-void SCF(Cpu& cpu)
+void SCF(CpuState& state)
 {
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG);
-    cpu.reg.f |= F::CARRY_FLAG;
-    ++cpu.reg.pc;
+    state.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG);
+    state.reg.f |= F::CARRY_FLAG;
+    ++state.reg.pc;
 }
 
-void CCF(Cpu& cpu)
+void CCF(CpuState& state)
 {
-    cpu.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG);
-    cpu.reg.f ^= F::CARRY_FLAG;
-    ++cpu.reg.pc;
+    state.reg.f &= ~(F::NEGATE_FLAG | F::HALF_CARRY_FLAG);
+    state.reg.f ^= F::CARRY_FLAG;
+    ++state.reg.pc;
 }
 
 /*     ************** Misc Ops *************     */
-void RetI(Cpu& cpu)
+void RetI(CpuState& state)
 {
-    auto Z = cpu.mmu.Read(cpu.reg.sp++);
-    auto W = cpu.mmu.Read(cpu.reg.sp++);
-    cpu.reg.pc = ToWord(W,Z);
-    cpu.ime = 1;
+    auto Z = state.mmu.Read(state.reg.sp++);
+    auto W = state.mmu.Read(state.reg.sp++);
+    state.reg.pc = ToWord(W,Z);
+    state.mmu.ime = 1;
 }
 
-void DisI(Cpu& cpu)
+void DisI(CpuState& state)
 {
-    cpu.ime = 0;
-    ++cpu.reg.pc;
+    state.mmu.ime = 0;
+    ++state.reg.pc;
 }
 
-void EnaI(Cpu& cpu)
+void EnaI(CpuState& state)
 {
     // TODO: Properly implement
-    cpu.ei = 1;
-    ++cpu.reg.pc;
+    state.mmu.ei = 1;
+    ++state.reg.pc;
 }
 
 } // namespace
 
-void CbOp(Cpu& cpu); // Forward Declaration
+void CbOp(CpuState& state); // Forward Declaration
 
-std::function<void(Cpu&)> s_Instructions[0x100] = {
+std::function<void(CpuState&)> s_Instructions[0x100] = {
     // 0x0X
     ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
     // 0x1X
@@ -993,7 +992,7 @@ std::function<void(Cpu&)> s_Instructions[0x100] = {
     ::LoadH<R::A,R::N>, ::Pop<R::AF>, ::LoadH<R::A,R::C>, ::DisI, ::Undef, ::Push<R::AF>, ::Or<R::A,R::N>, ::Rst<0x30>, ::Load<R::HL,R::SPe>, ::Load<R::SP,R::HL>, ::Load<R::A,R::NN>, ::EnaI, ::Undef, ::Undef, ::Cp<R::A,R::N>, ::Rst<0x38>,
 };
 
-std::function<void(Cpu&)> s_CbInstructions[0x100] = {
+std::function<void(CpuState&)> s_CbInstructions[0x100] = {
     // 0x0X
     ::RLC<R::B>, ::RLC<R::C>, ::RLC<R::D>, ::RLC<R::E>, ::RLC<R::H>, ::RLC<R::L>, ::RLC<R::IHL>, ::RLC<R::A>,  ::RRC<R::B>, ::RRC<R::C>, ::RRC<R::D>, ::RRC<R::E>, ::RRC<R::H>, ::RRC<R::L>, ::RRC<R::IHL>, ::RRC<R::A>,
     // 0x1X
@@ -1028,27 +1027,30 @@ std::function<void(Cpu&)> s_CbInstructions[0x100] = {
     ::SET<6,R::B>, ::SET<6,R::C>, ::SET<6,R::D>, ::SET<6,R::E>, ::SET<6,R::H>, ::SET<6,R::L>, ::SET<6,R::IHL>, ::SET<6,R::A>,  ::SET<7,R::B>, ::SET<7,R::C>, ::SET<7,R::D>, ::SET<7,R::E>, ::SET<7,R::H>, ::SET<7,R::L>, ::SET<7,R::IHL>, ::SET<7,R::A>,
 };
 
-int CpuInstructions::Execute(Cpu& cpu, uint8_t opcode)
-{
-    CpuDetails& details = cpu.details;
-    details.cbInstructionCycles = 0;
-    details.branchTaken = false;
+CpuInstructions::CpuInstructions(Mmu& mmu, Registers& reg):
+    m_state({mmu, reg, false, false})
+{}
 
-    s_Instructions[opcode](cpu);
-    if (details.cbInstructionCycles != 0)
+int CpuInstructions::Execute(uint8_t opcode)
+{
+    m_state.cbOpCodeCycles = 0;
+    m_state.branchTaken = false;
+
+    s_Instructions[opcode](m_state);
+    if (m_state.cbOpCodeCycles != 0)
     {
-        return details.cbInstructionCycles;
+        return m_state.cbOpCodeCycles;
     }
-    if (details.branchTaken)
+    if (m_state.branchTaken)
     {
         return s_ConditionalOpCodeCycles[opcode];
     }
     return s_OpCodeCycles[opcode];
 }
 
-void CbOp(Cpu& cpu)
+void CbOp(CpuState& state)
 {
-    uint8_t cbOpcode = cpu.mmu.Read(++cpu.reg.pc);
-    cpu.details.cbInstructionCycles = s_CbOpcodeCycles[cbOpcode];
-    s_CbInstructions[cbOpcode](cpu);
+    uint8_t cbOpcode = state.mmu.Read(++state.reg.pc);
+    state.cbOpCodeCycles = s_CbOpcodeCycles[cbOpcode];
+    s_CbInstructions[cbOpcode](state);
 }
