@@ -9,12 +9,12 @@ Cpu::Cpu(Mmu& mmu, Registers& reg):
     m_inst(mmu, reg)
 {}
 
-int Cpu::Execute(uint8_t opcode)
+MCycles Cpu::Execute(uint8_t opcode)
 {
     return m_inst.Execute(opcode);
 }
 
-int Cpu::Step()
+MCycles Cpu::Step()
 {
     auto opcode = m_mmu.Read(m_reg.pc);
     return Execute(opcode);

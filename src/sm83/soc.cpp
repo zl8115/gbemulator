@@ -15,10 +15,11 @@ Soc::Soc():
     m_ppu(m_mmu)
 { }
 
-int Soc::Step()
+MCycles Soc::Step()
 {
-    auto cycles = m_cpu.Step();
-    return cycles;
+    auto cpu_cycles = m_cpu.Step();
+    m_ppu.Step(cpu_cycles);
+    return cpu_cycles;
 }
 
 namespace {

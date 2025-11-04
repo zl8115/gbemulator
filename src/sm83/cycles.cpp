@@ -1,0 +1,21 @@
+#include "cycles.h"
+
+#include <cmath>
+
+CCycles::CCycles(unsigned int clockCycles):
+    cycles(clockCycles)
+{}
+
+CCycles::operator MCycles() const
+{
+    return MCycles(cycles * 4);
+}
+
+MCycles::MCycles(unsigned int machineCycles):
+    cycles(machineCycles)
+{}
+
+MCycles::operator CCycles() const
+{
+    return CCycles(std::ceil(cycles / 4.0f));
+}

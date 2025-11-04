@@ -12,7 +12,7 @@ class Soc
 public:
     Soc();
 
-    int Step();
+    MCycles Step();
     void LoadRomFromFile(std::string_view romPath);
 
     Mmu m_mmu;

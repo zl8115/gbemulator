@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cycles.h"
 #include "cpu_instructions.h"
 #include "mmu.h"
 #include "registers.h"
@@ -11,8 +12,8 @@ class Cpu
 public:
     Cpu(Mmu& mmu, Registers& reg);
 
-    int Step();
-    int Execute(uint8_t opcode);
+    MCycles Step();
+    MCycles Execute(uint8_t opcode);
 
 private:
     Registers& m_reg;

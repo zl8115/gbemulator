@@ -85,7 +85,7 @@ bool test_case_will_pass(const json& test_case)
     const auto& final = test_case["final"];
     const auto& cycles = test_case["cycles"];
     Soc soc = load_state(initial);
-    auto cyclesTaken = soc.Step();
+    auto cyclesTaken = soc.Step().cycles;
     if (!skipCyclesCheck && cyclesTaken != cycles.size())
         return false;
     return check_final_state(soc, final);
@@ -100,7 +100,7 @@ void run_dynamic_section_test(const json& test_case)
     DYNAMIC_SECTION(name)
     {
         Soc soc = load_state(initial);
-        auto cyclesTaken = soc.Step();
+        auto cyclesTaken = soc.Step().cycles;
         INFO("Initial: " + nlohmann::to_string(initial));
         INFO("Final: " + nlohmann::to_string(final));
 

@@ -1031,13 +1031,13 @@ CpuInstructions::CpuInstructions(Mmu& mmu, Registers& reg):
     m_state({mmu, reg, false, false})
 {}
 
-int CpuInstructions::Execute(uint8_t opcode)
+MCycles CpuInstructions::Execute(uint8_t opcode)
 {
-    m_state.cbOpCodeCycles = 0;
+    m_state.cbOpCodeCycles = {0};
     m_state.branchTaken = false;
 
     s_Instructions[opcode](m_state);
-    if (m_state.cbOpCodeCycles != 0)
+    if (m_state.cbOpCodeCycles.cycles != 0)
     {
         return m_state.cbOpCodeCycles;
     }

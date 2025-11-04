@@ -1,8 +1,10 @@
 # Main SM83 CPU Library
 add_library(Sm83 STATIC
+    bootrom.h
     cpu.h
     cpu_cycles.h
     cpu_instructions.h
+    cycles.h
     mmu.h
     ppu.h
     registers.h
@@ -11,6 +13,7 @@ add_library(Sm83 STATIC
     cpu.cpp
     cpu_cycles.cpp
     cpu_instructions.cpp
+    cycles.cpp
     mmu.cpp
     ppu.cpp
     registers.cpp

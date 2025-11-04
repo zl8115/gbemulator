@@ -3,6 +3,38 @@
 #include <stdint.h>
 #include <array>
 
+enum class MapperChip: uint8_t
+{
+    ROM_ONLY                       = 0x00, // ROM ONLY
+    MBC1,                                  // MBC1
+    MBC1_RAM,                              // MBC1+RAM
+    MBC1_RAM_BATTERY,                      // MBC1+RAM+BATTERY
+    MBC2                           = 0x05, // MBC2
+    MBC2_RAM,                              // MBC2+BATTERY
+    ROM_RAM                        = 0x08, // ROM+RAM 11
+    ROM_RAM_BATTERY,                       // ROM+RAM+BATTERY 11
+    MMMO1                          = 0x0B, // MMM01
+    MMMO1_RAM,                             // MMM01+RAM
+    MMMO1_RAM_BATTERY,                     // MMM01+RAM+BATTERY
+    MBC3_TIMER_BATTERY             = 0x0F, // MBC3+TIMER+BATTERY
+    MBC3_TIMER_BATTERY_12,                 // MBC3+TIMER+RAM+BATTERY 12
+    MBC3,                                  // MBC3
+    MBC3_RAM,                              // MBC3+RAM 12
+    MBC3_RAM_BATTERY,                      // MBC3+RAM+BATTERY 12
+    MBC5                           = 0x19, // MBC5
+    MBC5_RAM,                              // MBC5+RAM
+    MBC5_RAM_BATTERY,                      // MBC5+RAM+BATTERY
+    MBC5_RUMBLE,                           // MBC5+RUMBLE
+    MBC5_RUMBLE_RAM,                       // MBC5+RUMBLE+RAM
+    MBC5_RUMBLE_RAM_BATTERY,               // MBC5+RUMBLE+RAM+BATTERY
+    MBC6                           = 0x20, // MBC6
+    MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22, // MBC7+SENSOR+RUMBLE+RAM+BATTERY
+    POCKET_CAMERA                  = 0xFC, // POCKET CAMERA
+    BANDAI_TAMA5,                          // BANDAI TAMA5
+    HUC3,                                  // HuC3
+    HUC1_RAM_BATTERY                       // HuC1+RAM+BATTERY
+};
+
 /* From the Gearboy emulator */
 const std::array<uint8_t, 256> bootDMG = {
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
@@ -22,3 +54,9 @@ const std::array<uint8_t, 256> bootDMG = {
     0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
     0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
 };
+//
+// const std::array<uint8_t, 48> nintendoLogo = {
+//     0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+//     0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+//     0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+// };
