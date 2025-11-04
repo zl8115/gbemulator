@@ -20,7 +20,11 @@ add_library(Sm83 STATIC
     mmu.cpp
     ppu.cpp
     registers.cpp
-    soc.cpp)
+    soc.cpp
+
+    detail/mmu_impl.cpp
+    detail/ppu_impl.cpp
+)
 target_include_directories(
     Sm83
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

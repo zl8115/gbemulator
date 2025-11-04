@@ -6,5 +6,5 @@ class IRenderer
 {
 public:
     virtual ~IRenderer() = default;
-    virtual void Render(FrameBuffer& buffer) = 0;
+    virtual void Render(const FrameBuffer& buffer) = 0;
 };

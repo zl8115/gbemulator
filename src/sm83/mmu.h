@@ -4,11 +4,22 @@
 
 #include <cstdint>
 #include <vector>
-#include <array>
+#include <memory>
+
+namespace detail {
+class MmuImpl;
+} // namespace detail
 
 class Mmu {
 public:
     Mmu();
+    ~Mmu();
+
+    Mmu(Mmu&&) noexcept;
+    Mmu& operator=(Mmu&&) noexcept;
+
+    Mmu(const Mmu&) = delete;
+    Mmu& operator=(const Mmu&) = delete;
 
     enum class InterruptType
     {
@@ -23,46 +34,42 @@ public:
     void Write(const uint16_t address, uint8_t byte);
     void LoadRom(std::vector<uint8_t>&& romData);
 
-    uint8_t& At(uint16_t address);
-    uint8_t const& At(uint16_t address) const;
-
     template <InterruptType Type>
     void EnableInterrupt()
     {
-        uint8_t& reg = At(0xFFFF);
-        SetBitTo<static_cast<std::size_t>(Type), true>(reg);
+        uint8_t value = Read(0xFFFF);
+        SetBitTo<static_cast<std::size_t>(Type), true>(value);
+        Write(0xFFFF, value);
     }
 
     template <Mmu::InterruptType Type>
     void DisableInterrupt()
     {
-        uint8_t& reg = At(0xFFFF);
-        SetBitTo<static_cast<std::size_t>(Type), false>(reg);
+        uint8_t value = Read(0xFFFF);
+        SetBitTo<static_cast<std::size_t>(Type), false>(value);
+        Write(0xFFFF, value);
     }
 
     template <Mmu::InterruptType Type>
     void SetInterruptFlag()
     {
-        uint8_t& reg = At(0xFF0F);
-        SetBitTo<static_cast<std::size_t>(Type), true>(reg);
+        uint8_t value = Read(0xFF0F);
+        SetBitTo<static_cast<std::size_t>(Type), true>(value);
+        Write(0xFFFF, value);
     }
 
     template <Mmu::InterruptType Type>
     void UnsetInterruptFlag()
     {
-        uint8_t& reg = At(0xFF0F);
-        SetBitTo<static_cast<std::size_t>(Type), false>(reg);
+        uint8_t value = Read(0xFF0F);
+        SetBitTo<static_cast<std::size_t>(Type), false>(value);
+        Write(0xFFFF, value);
     }
 
     uint8_t ei = 0;
     uint8_t ime = 0;
     uint8_t ie = 0;
 
-    // Iterator like access
-    auto begin() { return m_ram.begin(); }
-    auto end()   { return m_ram.end(); }
-
 private:
-    std::vector<uint8_t> m_rom;
-    std::array<uint8_t, 0x10000> m_ram;
+    std::unique_ptr<detail::MmuImpl> m_pImpl;
 };
