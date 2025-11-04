@@ -16,6 +16,7 @@ struct CCycles
 
     CCycles& operator+=  (const CCycles& other) { cycles += other.cycles; return *this; }
     CCycles& operator-=  (const CCycles& other) { cycles -= other.cycles; return *this; }
+    CCycles& operator%=  (const CCycles& other) { cycles %= other.cycles; return *this; }
     CCycles  operator+   (const CCycles& other) const { return CCycles(cycles + other.cycles); }
     CCycles  operator-   (const CCycles& other) const { return CCycles(cycles - other.cycles); }
     CCycles  operator*   (const CCycles& other) const { return CCycles(cycles * other.cycles); }

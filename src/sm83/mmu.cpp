@@ -1,5 +1,6 @@
 #include "mmu.h"
 #include "bootrom.h"
+#include "util_bitmanip.h"
 
 #include <iterator>
 #include <memory.h>
