@@ -1,5 +1,6 @@
 #include "cpu_instructions.h"
 #include "cpu_cycles.h"
+#include "util_bitmanip.h"
 
 #include <functional>
 #include <stdexcept>
@@ -58,23 +59,6 @@ concept RegTarget = (SmallReg<T> || LargeReg<T>);
 
 template <R T>
 concept IncDecReg = T == R::HLI || T == R::HLD;
-
-/******************** Utility Functions ********************/
-
-inline uint16_t ToWord(uint8_t hibyte, uint8_t lobyte)
-{
-    return (hibyte << 8) | lobyte;
-}
-
-inline uint8_t Lsb(uint16_t word)
-{
-    return static_cast<uint8_t>(word & 0xFF);
-}
-
-inline uint8_t Msb(uint16_t word)
-{
-    return word >> 8;
-}
 
 namespace {
 

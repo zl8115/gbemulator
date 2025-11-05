@@ -2,6 +2,11 @@
 
 #include <cstdint>
 
+inline bool CheckBit(const uint8_t value, uint8_t bit)
+{
+    return (value & (1 << bit)) != 0;
+}
+
 template <std::size_t Bit>
 bool CheckBit(const uint8_t value)
 {
@@ -44,4 +49,19 @@ void SetBitTo(uint8_t& value, bool bitValue)
     {
         SetBitToFalse<Bit>(value);
     }
+}
+
+inline uint16_t ToWord(uint8_t hibyte, uint8_t lobyte)
+{
+    return (hibyte << 8) | lobyte;
+}
+
+inline uint8_t Lsb(uint16_t word)
+{
+    return static_cast<uint8_t>(word & 0xFF);
+}
+
+inline uint8_t Msb(uint16_t word)
+{
+    return word >> 8;
 }

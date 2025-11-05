@@ -3,16 +3,16 @@
 #include <algorithm>
 
 FrameBuffer::FrameBuffer(unsigned int width, unsigned int height)
-    : m_buffer(width * height, Color::White)
+    : m_buffer(width * height, Colour::White)
 {}
 
-void FrameBuffer::SetPixel(unsigned int x, unsigned int y, Color color)
+void FrameBuffer::SetPixel(unsigned int x, unsigned int y, Colour color)
 {
     auto index = GetPixelIndex(x, y);
     m_buffer.at(index) = color;
 }
 
-Color FrameBuffer::GetPixel(unsigned int x, unsigned int y) const
+Colour FrameBuffer::GetPixel(unsigned int x, unsigned int y) const
 {
     auto index = GetPixelIndex(x, y);
     return m_buffer.at(index);
@@ -20,7 +20,7 @@ Color FrameBuffer::GetPixel(unsigned int x, unsigned int y) const
 
 void FrameBuffer::Reset()
 {
-    std::fill(m_buffer.begin(), m_buffer.end(), Color::White);
+    std::fill(m_buffer.begin(), m_buffer.end(), Colour::White);
 }
 
 std::size_t FrameBuffer::GetPixelIndex(unsigned int x, unsigned int y) const

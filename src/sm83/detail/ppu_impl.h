@@ -4,11 +4,31 @@
 #include "mmu.h"
 #include "mmu_mapped_register.h"
 #include "frame_buffer.h"
-#include "irenderer.h"
 
 #include <cstdint>
+#include <array>
 
 namespace detail {
+
+class Pallete 
+{
+public:
+    Pallete():
+        m_colours({Colour::White, Colour::LightGrey, Colour::DarkGrey, Colour::Black})
+    {}
+
+    Pallete(Colour c0, Colour c1, Colour c2, Colour c3):
+        m_colours({c0, c1, c2, c3})
+    {}
+
+    const Colour& operator[] (unsigned short index) const
+    {
+        return m_colours[index];
+    }
+
+private:
+    std::array<Colour, 4> m_colours;
+};
 
 class PpuImpl
 {
@@ -65,32 +85,39 @@ private:
     {
         MappedRegisters(Mmu& mmu);
 
-        MappedByteRegister<0xFF40> lcdControl;
-        MappedByteRegister<0xFF41> lcdStatus;
-        MappedByteRegister<0xFF42> viewScrollX;
-        MappedByteRegister<0xFF43> viewScrollY;
-        MappedByteRegister<0xFF44> lcdYCoord;
-        MappedByteRegister<0xFF45> lcdLYCompare;
-        MappedByteRegister<0xFF46> dmaStartAddress;
-        MappedByteRegister<0xFF47> bgPallete;
-        MappedByteRegister<0xFF48> spritePalette0;
-        MappedByteRegister<0xFF49> spritePalette1;
-        MappedByteRegister<0xFF4A> windowPosY;
-        MappedByteRegister<0xFF4B> windowPosX;
-        MappedRegisterRegion<0x8000, 0x2000> vram;
-        MappedRegisterRegion<0xFE00, 0x00A0> oam;
+        MappedRegisterBlock vram_tileDataBlock0;
+        MappedRegisterBlock vram_tileDataBlock1;
+        MappedRegisterBlock vram_tileDataBlock2;
+        MappedRegisterBlock vram_tileMapBlock0;
+        MappedRegisterBlock vram_tileMapBlock1;
+        MappedRegisterBlock oam;
+        MappedByteRegister lcdControl;
+        MappedByteRegister lcdStatus;
+        MappedByteRegister viewScrollX;
+        MappedByteRegister viewScrollY;
+        MappedByteRegister lcdYCoord;
+        MappedByteRegister lcdLYCompare;
+        MappedByteRegister dmaStartAddress;
+        MappedByteRegister bgPallete;
+        MappedByteRegister spritePalette0;
+        MappedByteRegister spritePalette1;
+        MappedByteRegister windowPosY;
+        MappedByteRegister windowPosX;
     };
 
     void WriteScanline(uint8_t line);
     void WriteSprites();
 
+    void DrawBGLine(uint8_t line);
+    void DrawWindowLine(uint8_t line);
+    uint16_t GetObjTile(uint8_t tileId);
+    uint16_t GetBGOrWindowTile(uint8_t tileId);
+
     bool m_shouldRender;
     Mmu& m_mmu;
     CCycles m_cycleCounter;
     MappedRegisters m_reg;
-
     FrameBuffer m_viewBuffer;
-    FrameBuffer m_mapBuffer;
 };
 
 class PpuDrawer

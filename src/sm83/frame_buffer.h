@@ -2,10 +2,10 @@
 
 #include <vector>
 
-enum class Color {
+enum class Colour {
     White,
-    LightGray,
-    DarkGray,
+    LightGrey,
+    DarkGrey,
     Black,
 };
 
@@ -13,8 +13,8 @@ class FrameBuffer {
 public:
     FrameBuffer(unsigned int width, unsigned int height);
 
-    void SetPixel(unsigned int x, unsigned int y, Color color);
-    Color GetPixel(unsigned int x, unsigned int y) const;
+    void SetPixel(unsigned int x, unsigned int y, Colour color);
+    Colour GetPixel(unsigned int x, unsigned int y) const;
 
     void Reset();
 
@@ -23,5 +23,5 @@ private:
 
     unsigned int m_width;
     unsigned int m_height;
-    std::vector<Color> m_buffer;
+    std::vector<Colour> m_buffer;
 };
