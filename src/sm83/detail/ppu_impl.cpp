@@ -75,20 +75,21 @@ PpuImpl::MappedRegisters::MappedRegisters(Mmu& mmu):
 {}
 
 PpuImpl::PpuImpl(Mmu& mmu):
+    m_pRenderer(nullptr),
     m_mmu(mmu),
     m_reg(mmu),
     m_cycleCounter(0),
     m_viewBuffer(GAMEBOY_WIDTH, GAMEBOY_HEIGHT)
 {}
 
-bool PpuImpl::ShouldRender()
-{
-    return m_shouldRender;
-}
-
 void PpuImpl::Step(CCycles cycles)
 {
-    m_shouldRender = false;
+    m_cycleCounter += cycles;
+    if (m_pRenderer)
+    {
+        m_pRenderer->Step();
+    }
+
     switch (GetPpuMode())
     {
         case Mode::HBLANK:
@@ -128,7 +129,7 @@ void PpuImpl::Step(CCycles cycles)
                 if (line == 154)
                 {
                     WriteSprites();
-                    m_shouldRender = true;
+                    Render();
                     m_viewBuffer.Reset();
                     m_reg.lcdYCoord.Write(0);
 
@@ -167,6 +168,19 @@ void PpuImpl::Step(CCycles cycles)
         default:
             throw std::runtime_error("Unexpected ppu mode");
     }
+}
+
+void PpuImpl::Render() const
+{
+    if (m_pRenderer)
+    {
+        m_pRenderer->Render(m_viewBuffer);
+    }
+}
+
+void PpuImpl::RegisterRenderer(IRenderer* pRenderer)
+{
+    m_pRenderer = pRenderer;
 }
 
 const FrameBuffer& PpuImpl::GetViewBuffer() const

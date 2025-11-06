@@ -31,8 +31,5 @@ public:
 
     bool IsDisplayOn() const;
 
-    void Render() const;
-
     std::unique_ptr<detail::PpuImpl> m_pImpl;
-    IRenderer* m_pRenderer;
 };

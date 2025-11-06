@@ -19,6 +19,11 @@ void Gameboy::Step()
     // m_renderer.Render(fb);
 }
 
+void Gameboy::LoadRom(std::string_view romPath)
+{
+    m_soc.LoadRomFromFile(romPath);
+}
+
 bool Gameboy::ShouldExit()
 {
     return m_renderer.ShouldExit();

@@ -11,6 +11,7 @@ class Gameboy
 public:
     Gameboy();
     void Step();
+    void LoadRom(std::string_view romPath);
     bool ShouldExit();
 
 private:

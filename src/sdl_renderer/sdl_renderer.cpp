@@ -22,28 +22,30 @@ namespace {
 
 uint32_t GetARGBColour(Colour colour)
 {
-switch (colour)
+    switch (colour)
     {
         case Colour::White:
-            return 0x00FFFFFF;
+            return 0xFFFFFFFF;
         case Colour::LightGrey:
-            return 0x00AAAAAA;
+            return 0xFFAAAAAA;
         case Colour::DarkGrey:
-            return 0x00555555;
+            return 0xFF555555;
         case Colour::Black:
-            return 0x00000000;
+            return 0xFF000000;
     }
     throw std::runtime_error(std::format("Unable to translate colour for Colour {}", static_cast<unsigned short>(colour)));
 };
 
 void SetRenderPixel(uint32_t* pPixels, uint x, uint y, uint32_t pixel)
 {
+    unsigned int heightOffset = RENDER_WIDTH * PIXEL_SIZE * y;
+    unsigned int widthOffset = PIXEL_SIZE * x;
     for (int h = 0; h < PIXEL_SIZE; ++h)
     {
-        unsigned int heightIndex = (RENDER_WIDTH * y) + h;
+        unsigned int heightIndex = heightOffset + (h * RENDER_WIDTH);
         for (int w = 0; w < PIXEL_SIZE; ++w)
         {
-            unsigned int pixelIndex = heightIndex + (RENDER_WIDTH * x) + w;
+            unsigned int pixelIndex = heightIndex + widthOffset + w;
             pPixels[pixelIndex] = pixel;
         }
     }

@@ -4,6 +4,7 @@
 #include "mmu.h"
 #include "mmu_mapped_register.h"
 #include "frame_buffer.h"
+#include "irenderer.h"
 
 #include <cstdint>
 #include <array>
@@ -56,8 +57,9 @@ public:
         LONG,  // 8x16
     };
 
-    bool ShouldRender();
     void Step(CCycles cycles);
+    void Render() const;
+    void RegisterRenderer(IRenderer* pRenderer);
     const FrameBuffer& GetViewBuffer() const;
 
     // LCD Control Checks
@@ -113,16 +115,11 @@ private:
     uint16_t GetObjTile(uint8_t tileId);
     uint16_t GetBGOrWindowTile(uint8_t tileId);
 
-    bool m_shouldRender;
+    IRenderer* m_pRenderer;
     Mmu& m_mmu;
     CCycles m_cycleCounter;
     MappedRegisters m_reg;
     FrameBuffer m_viewBuffer;
-};
-
-class PpuDrawer
-{
-
 };
 
 } // namespace detail

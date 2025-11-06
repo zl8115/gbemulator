@@ -34,7 +34,8 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
 void MmuImpl::LoadRom(std::vector<uint8_t>&& romData)
 {
     m_rom = std::forward<std::vector<uint8_t>>(romData);
-    if (m_rom.at(0x0147) != static_cast<uint8_t>(MapperChip::ROM_ONLY))
+    uint8_t chipType = m_rom.at(0x0147);
+    if (chipType != static_cast<uint8_t>(MapperChip::ROM_ONLY))
     {
         throw std::runtime_error("Unsupported ROM with mapper chip type.");
     }
