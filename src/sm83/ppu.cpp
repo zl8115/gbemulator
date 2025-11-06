@@ -10,6 +10,11 @@ Ppu& Ppu::operator=(Ppu&&) noexcept = default;
 
 void Ppu::Step(CCycles cycles)
 {
+    if (m_pRenderer)
+    {
+        m_pRenderer->Step();
+    }
+
     m_pImpl->Step(cycles);
     if (m_pImpl->ShouldRender())
     {
@@ -17,15 +22,15 @@ void Ppu::Step(CCycles cycles)
     }
 }
 
-void Ppu::RegisterRenderer(std::shared_ptr<IRenderer> pRenderer)
+void Ppu::RegisterRenderer(IRenderer* pRenderer)
 {
-    m_renderer = pRenderer;
+    m_pRenderer = pRenderer;
 }
 
 void Ppu::Render() const
 {
-    if (m_renderer)
+    if (m_pRenderer)
     {
-        m_renderer->Render(m_pImpl->GetViewBuffer());
+        m_pRenderer->Render(m_pImpl->GetViewBuffer());
     }
 }

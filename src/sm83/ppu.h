@@ -24,7 +24,7 @@ public:
     Ppu& operator=(const Ppu&) = delete;
 
     void Step(CCycles cycles);
-    void RegisterRenderer(std::shared_ptr<IRenderer> pRenderer);
+    void RegisterRenderer(IRenderer* pRenderer);
 
     void SetDisplayOn();
     void SetDisplayOff();
@@ -34,5 +34,5 @@ public:
     void Render() const;
 
     std::unique_ptr<detail::PpuImpl> m_pImpl;
-    std::shared_ptr<IRenderer> m_renderer;
+    IRenderer* m_pRenderer;
 };

@@ -1,0 +1,16 @@
+add_executable(SdlGbEmulator
+    sdl_gameboy.cpp
+    main.cpp
+)
+target_link_libraries(
+    SdlGbEmulator
+    PRIVATE
+    Sm83
+    SDL3::SDL3
+    SdlRenderer
+)
+target_include_directories(
+    SdlGbEmulator
+    PRIVATE
+    $<BUILD_INTERFACE:${SDL3_SOURCE_DIR}/include>
+)

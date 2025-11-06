@@ -17,6 +17,9 @@ public:
     Colour GetPixel(unsigned int x, unsigned int y) const;
 
     void Reset();
+    unsigned int GetWidth() const;
+    unsigned int GetHeight() const;
+    const std::vector<Colour>& GetBuffer() const;
 
 private:
     std::size_t GetPixelIndex(unsigned int x, unsigned int y) const;

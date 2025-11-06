@@ -2,6 +2,8 @@
 
 struct MCycles;
 
+inline constexpr unsigned int CLOCK_PER_MACHINE_CYCLE = 4;
+
 struct CCycles
 {
     CCycles(unsigned int clockCycles);

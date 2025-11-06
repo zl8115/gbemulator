@@ -7,6 +7,7 @@ add_library(Sm83 STATIC
     cycles.h
     frame_buffer.h
     irenderer.h
+    input.h
     mmu.h
     ppu.h
     registers.h
@@ -17,6 +18,7 @@ add_library(Sm83 STATIC
     cpu_instructions.cpp
     cycles.cpp
     frame_buffer.cpp
+    input.cpp
     mmu.cpp
     ppu.cpp
     registers.cpp
@@ -24,6 +26,7 @@ add_library(Sm83 STATIC
 
     detail/mmu_impl.cpp
     detail/ppu_impl.cpp
+    detail/input_impl.cpp
 )
 target_include_directories(
     Sm83

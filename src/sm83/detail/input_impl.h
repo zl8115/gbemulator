@@ -1,0 +1,31 @@
+#pragma once
+
+#include "input.h"
+
+#include "mmu.h"
+#include "mmu_mapped_register.h"
+
+namespace detail {
+
+class InputImpl
+{
+public:
+    InputImpl(Mmu& mmu);
+
+    void ButtonPressed(GbButton button);
+    void ButtonReleased(GbButton button);
+    void WriteInput();
+
+private:
+    MappedByteRegister m_reg;
+    bool m_pressedUp;
+    bool m_pressedDown;
+    bool m_pressedLeft;
+    bool m_pressedRight;
+    bool m_pressedA;
+    bool m_pressedB;
+    bool m_pressedSelect;
+    bool m_pressedStart;
+};
+
+} // namespace detail

@@ -4,7 +4,7 @@
 #include "frame_buffer.h"
 #include "irenderer.h"
 #include "util_bitmanip.h"
-#include "detail/mmu_reg_names.h"
+#include "mmu_reg_names.h"
 
 #include <cstdint>
 #include <stdexcept>
@@ -17,14 +17,6 @@ static const CCycles CLOCKS_PER_SCANLINE = (CLOCKS_PER_SCANLINE_OAM + CLOCKS_PER
 static const CCycles CLOCKS_PER_VBLANK = 4560; /* Mode 1 */
 static const CCycles SCANLINES_PER_FRAME = 144;
 static const CCycles CLOCKS_PER_FRAME = (CLOCKS_PER_SCANLINE * SCANLINES_PER_FRAME) + CLOCKS_PER_VBLANK;
-
-constexpr uint GAMEBOY_WIDTH = 160;
-constexpr uint GAMEBOY_HEIGHT = 144;
-constexpr uint BG_MAP_SIZE = 256;
-
-constexpr uint TILES_PER_LINE = 32;
-constexpr uint TILE_HEIGHT_PX = 8;
-constexpr uint TILE_WIDTH_PX = 8;
 
 namespace {
 

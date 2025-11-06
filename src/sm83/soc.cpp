@@ -11,15 +11,27 @@
 Soc::Soc():
     m_mmu(),
     m_reg(),
+    m_input(m_mmu),
     m_cpu(m_mmu, m_reg),
     m_ppu(m_mmu)
-{ }
+{}
 
 MCycles Soc::Step()
 {
     auto cpu_cycles = m_cpu.Step();
     m_ppu.Step(cpu_cycles);
+    m_input.Step();
     return cpu_cycles;
+}
+
+Input& Soc::GetInput()
+{
+    return m_input;
+}
+
+void Soc::RegisterRenderer(IRenderer* pRenderer)
+{
+    m_ppu.RegisterRenderer(pRenderer);
 }
 
 namespace {

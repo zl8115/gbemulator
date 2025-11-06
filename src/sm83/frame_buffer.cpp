@@ -2,8 +2,10 @@
 
 #include <algorithm>
 
-FrameBuffer::FrameBuffer(unsigned int width, unsigned int height)
-    : m_buffer(width * height, Colour::White)
+FrameBuffer::FrameBuffer(unsigned int width, unsigned int height):
+    m_width(width),
+    m_height(height),
+    m_buffer(width * height, Colour::White)
 {}
 
 void FrameBuffer::SetPixel(unsigned int x, unsigned int y, Colour color)

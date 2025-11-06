@@ -8,7 +8,7 @@ CCycles::CCycles(unsigned int clockCycles):
 
 CCycles::operator MCycles() const
 {
-    return MCycles(cycles * 4);
+    return MCycles(std::ceil(cycles / 4.0f));
 }
 
 MCycles::MCycles(unsigned int machineCycles):
@@ -17,5 +17,5 @@ MCycles::MCycles(unsigned int machineCycles):
 
 MCycles::operator CCycles() const
 {
-    return CCycles(std::ceil(cycles / 4.0f));
+    return CCycles(cycles * CLOCK_PER_MACHINE_CYCLE);
 }
