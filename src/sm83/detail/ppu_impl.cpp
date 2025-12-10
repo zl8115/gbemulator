@@ -4,7 +4,7 @@
 #include "frame_buffer.h"
 #include "irenderer.h"
 #include "util_bitmanip.h"
-#include "mmu_reg_names.h"
+#include "impl_helper.h"
 
 #include <cstdint>
 #include <stdexcept>
@@ -20,7 +20,7 @@ static const CCycles CLOCKS_PER_FRAME = (CLOCKS_PER_SCANLINE * SCANLINES_PER_FRA
 
 namespace {
 
-detail::Pallete LoadPallete(MappedByteRegister& reg)
+detail::Pallete LoadPallete(detail::MappedRegister& reg)
 {
     uint8_t palleteValue = reg.Read();
     Colour c0 = static_cast<Colour>((palleteValue & 0b00000011));
@@ -31,7 +31,7 @@ detail::Pallete LoadPallete(MappedByteRegister& reg)
     return {c0, c1, c2, c3};
 }
 
-inline uint16_t GetTileWord(MappedRegisterBlock& lowerBlock, MappedRegisterBlock& upperBlock, uint8_t tileId)
+inline uint16_t GetTileWord(detail::MappedMemoryBlock& lowerBlock, detail::MappedMemoryBlock& upperBlock, uint8_t tileId)
 {
     // Each tile is 2 bytes, so to get the right relative address, we multiply the index by 2
     uint16_t address = 0;
@@ -54,24 +54,24 @@ inline Colour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx,
 namespace detail {
 
 PpuImpl::MappedRegisters::MappedRegisters(Mmu& mmu):
-    vram_tileDataBlock0 (mmu, 0x8000, 0x0800),
-    vram_tileDataBlock1 (mmu, 0x8800, 0x0800),
-    vram_tileDataBlock2 (mmu, 0x9000, 0x0800),
-    vram_tileMapBlock0  (mmu, 0x9800, 0x0400),
-    vram_tileMapBlock1  (mmu, 0x9C00, 0x0400),
-    oam                 (mmu, 0xFE00, 0x00A0),
-    lcdControl          (mmu, 0xFF40),
-    lcdStatus           (mmu, 0xFF41),
-    viewScrollX         (mmu, 0xFF42),
-    viewScrollY         (mmu, 0xFF43),
-    lcdYCoord           (mmu, 0xFF44),
-    lcdLYCompare        (mmu, 0xFF45),
-    dmaStartAddress     (mmu, 0xFF46),
-    bgPallete           (mmu, 0xFF47),
-    spritePalette0      (mmu, 0xFF48),
-    spritePalette1      (mmu, 0xFF49),
-    windowPosY          (mmu, 0xFF4A),
-    windowPosX          (mmu, 0xFF4B)
+    vram_tileDataBlock0 (ImplHelper::ExtractImpl(mmu), 0x8000, 0x0800),
+    vram_tileDataBlock1 (ImplHelper::ExtractImpl(mmu), 0x8800, 0x0800),
+    vram_tileDataBlock2 (ImplHelper::ExtractImpl(mmu), 0x9000, 0x0800),
+    vram_tileMapBlock0  (ImplHelper::ExtractImpl(mmu), 0x9800, 0x0400),
+    vram_tileMapBlock1  (ImplHelper::ExtractImpl(mmu), 0x9C00, 0x0400),
+    oam                 (ImplHelper::ExtractImpl(mmu), 0xFE00, 0x00A0),
+    lcdControl          (ImplHelper::ExtractImpl(mmu), 0xFF40),
+    lcdStatus           (ImplHelper::ExtractImpl(mmu), 0xFF41),
+    viewScrollX         (ImplHelper::ExtractImpl(mmu), 0xFF42),
+    viewScrollY         (ImplHelper::ExtractImpl(mmu), 0xFF43),
+    lcdYCoord           (ImplHelper::ExtractImpl(mmu), 0xFF44),
+    lcdLYCompare        (ImplHelper::ExtractImpl(mmu), 0xFF45),
+    dmaStartAddress     (ImplHelper::ExtractImpl(mmu), 0xFF46),
+    bgPallete           (ImplHelper::ExtractImpl(mmu), 0xFF47),
+    spritePalette0      (ImplHelper::ExtractImpl(mmu), 0xFF48),
+    spritePalette1      (ImplHelper::ExtractImpl(mmu), 0xFF49),
+    windowPosY          (ImplHelper::ExtractImpl(mmu), 0xFF4A),
+    windowPosX          (ImplHelper::ExtractImpl(mmu), 0xFF4B)
 {}
 
 PpuImpl::PpuImpl(Mmu& mmu):
@@ -313,7 +313,7 @@ void PpuImpl::DrawBGLine(uint8_t line)
     uint tilePixelY = bgMapY % TILE_HEIGHT_PX;
 
     const bool UseTileMap0 = GetBGAndWindowTileMapAreaType() == TileMapAreaType::ZERO;
-    MappedRegisterBlock& tileMap = UseTileMap0
+    MappedMemoryBlock& tileMap = UseTileMap0
                                     ? m_reg.vram_tileMapBlock0
                                     : m_reg.vram_tileMapBlock1;
 
@@ -362,7 +362,7 @@ void PpuImpl::DrawWindowLine(uint8_t line)
 
     Pallete pallete = ::LoadPallete(m_reg.bgPallete);
     const bool UseTileMap0 = GetBGAndWindowTileMapAreaType() == TileMapAreaType::ZERO;
-    MappedRegisterBlock& tileMap = UseTileMap0
+    MappedMemoryBlock& tileMap = UseTileMap0
                                     ? m_reg.vram_tileMapBlock0
                                     : m_reg.vram_tileMapBlock1;
 

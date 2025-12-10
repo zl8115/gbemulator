@@ -1,31 +1,34 @@
 #pragma once
 
-#include "mmu.h"
+#include "mmu_impl.h"
 #include <cstdint>
 
 #include <stdexcept>
+#include <span>
 
-class MappedByteRegister
+namespace detail {
+
+class MappedRegister
 {
 public:
-    MappedByteRegister(Mmu& mmu, uint16_t address):
-        m_mmu(mmu),
+    MappedRegister(MmuImpl& mmu, uint16_t address):
+        m_reg(mmu.m_map.at(address)),
         m_address(address)
     {}
 
-    uint8_t Read() const { return m_mmu.Read(m_address); }
-    void Write(uint8_t byte) { return m_mmu.Write(m_address, byte); };
+    uint8_t Read() const { return m_reg; }
+    void Write(uint8_t byte) { m_reg = byte; };
 
 private:
-    Mmu& m_mmu;
+    uint8_t& m_reg;
     const uint16_t m_address;
 };
 
-class MappedRegisterBlock
+class MappedMemoryBlock
 {
 public:
-    MappedRegisterBlock(Mmu& mmu, uint16_t startAddress, uint16_t size):
-        m_mmu(mmu),
+    MappedMemoryBlock(MmuImpl& mmu, uint16_t startAddress, uint16_t size):
+        m_region(mmu.m_map.begin() + startAddress, mmu.m_map.begin() + startAddress + size),
         m_startAddress(startAddress),
         m_size(size)
     {}
@@ -36,7 +39,7 @@ public:
         {
             throw std::out_of_range("Accessing relative address outside range");
         }
-        return m_mmu.Read(m_startAddress + relativeAddress);
+        return m_region[relativeAddress];
     }
 
     void Write(uint8_t relativeAddress, uint8_t byte)
@@ -45,11 +48,13 @@ public:
         {
             throw std::out_of_range("Accessing relative address outside range");
         }
-        return m_mmu.Write(m_startAddress + relativeAddress, byte);
+        m_region[relativeAddress] = byte;
     };
 
 private:
-    Mmu& m_mmu;
+    std::span<uint8_t> m_region;
     const uint16_t m_startAddress;
     const uint16_t m_size;
 };
+
+} // namespace detail

@@ -20,8 +20,3 @@ void Mmu::Write(const uint16_t address, uint8_t byte)
 {
     return m_pImpl->Write(address, byte);
 }
-
-void Mmu::LoadRom(std::vector<uint8_t>&& romData)
-{
-    return m_pImpl->LoadRom(std::forward<std::vector<uint8_t>>(romData));
-}

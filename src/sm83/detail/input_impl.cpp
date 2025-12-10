@@ -1,11 +1,12 @@
 #include "input_impl.h"
+#include "detail/impl_helper.h"
 #include "util_bitmanip.h"
 #include "detail/mmu_reg_names.h"
 
 namespace detail {
 
 InputImpl::InputImpl(Mmu& mmu):
-    m_reg(mmu, REG_BG_PALLETE),
+    m_reg(ImplHelper::ExtractImpl(mmu), REG_BG_PALLETE),
     m_pressedUp(false),
     m_pressedDown(false),
     m_pressedLeft(false),

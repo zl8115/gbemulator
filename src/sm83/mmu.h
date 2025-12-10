@@ -8,10 +8,13 @@
 
 namespace detail {
 class MmuImpl;
+class ImplHelper;
 } // namespace detail
 
 class Mmu {
 public:
+    friend class detail::ImplHelper;
+
     Mmu();
     ~Mmu();
 
@@ -32,7 +35,6 @@ public:
 
     uint8_t Read(const uint16_t address) const;
     void Write(const uint16_t address, uint8_t byte);
-    void LoadRom(std::vector<uint8_t>&& romData);
 
     template <InterruptType Type>
     void EnableInterrupt()

@@ -3,7 +3,7 @@
 #include "input.h"
 
 #include "mmu.h"
-#include "mmu_mapped_register.h"
+#include "mmu_mapped_memory.h"
 
 namespace detail {
 
@@ -17,7 +17,7 @@ public:
     void WriteInput();
 
 private:
-    MappedByteRegister m_reg;
+    MappedRegister m_reg;
     bool m_pressedUp;
     bool m_pressedDown;
     bool m_pressedLeft;

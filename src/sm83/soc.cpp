@@ -13,7 +13,8 @@ Soc::Soc():
     m_reg(),
     m_input(m_mmu),
     m_cpu(m_mmu, m_reg),
-    m_ppu(m_mmu)
+    m_ppu(m_mmu),
+    m_catridge(m_mmu)
 {}
 
 MCycles Soc::Step()
@@ -75,5 +76,5 @@ void Soc::LoadRomFromFile(std::string_view romPath)
 {
     auto data = LoadRomData(romPath);
     ValidateRomDataOrThrow(data);
-    m_mmu.LoadRom(std::move(data));
+    m_catridge.LoadRom(std::move(data));
 }

@@ -2,7 +2,7 @@
 
 #include "cycles.h"
 #include "mmu.h"
-#include "mmu_mapped_register.h"
+#include "mmu_mapped_memory.h"
 #include "frame_buffer.h"
 #include "irenderer.h"
 
@@ -87,24 +87,24 @@ private:
     {
         MappedRegisters(Mmu& mmu);
 
-        MappedRegisterBlock vram_tileDataBlock0;
-        MappedRegisterBlock vram_tileDataBlock1;
-        MappedRegisterBlock vram_tileDataBlock2;
-        MappedRegisterBlock vram_tileMapBlock0;
-        MappedRegisterBlock vram_tileMapBlock1;
-        MappedRegisterBlock oam;
-        MappedByteRegister lcdControl;
-        MappedByteRegister lcdStatus;
-        MappedByteRegister viewScrollX;
-        MappedByteRegister viewScrollY;
-        MappedByteRegister lcdYCoord;
-        MappedByteRegister lcdLYCompare;
-        MappedByteRegister dmaStartAddress;
-        MappedByteRegister bgPallete;
-        MappedByteRegister spritePalette0;
-        MappedByteRegister spritePalette1;
-        MappedByteRegister windowPosY;
-        MappedByteRegister windowPosX;
+        MappedMemoryBlock vram_tileDataBlock0;
+        MappedMemoryBlock vram_tileDataBlock1;
+        MappedMemoryBlock vram_tileDataBlock2;
+        MappedMemoryBlock vram_tileMapBlock0;
+        MappedMemoryBlock vram_tileMapBlock1;
+        MappedMemoryBlock oam;
+        MappedRegister lcdControl;
+        MappedRegister lcdStatus;
+        MappedRegister viewScrollX;
+        MappedRegister viewScrollY;
+        MappedRegister lcdYCoord;
+        MappedRegister lcdLYCompare;
+        MappedRegister dmaStartAddress;
+        MappedRegister bgPallete;
+        MappedRegister spritePalette0;
+        MappedRegister spritePalette1;
+        MappedRegister windowPosY;
+        MappedRegister windowPosX;
     };
 
     void WriteScanline(uint8_t line);

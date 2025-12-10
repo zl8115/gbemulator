@@ -5,6 +5,7 @@
 #include "ppu.h"
 #include "input.h"
 #include "registers.h"
+#include "catridge.h"
 
 #include <string_view>
 
@@ -23,4 +24,5 @@ public:
     Input m_input;
     Cpu m_cpu;
     Ppu m_ppu;
+    Catridge m_catridge;
 };
