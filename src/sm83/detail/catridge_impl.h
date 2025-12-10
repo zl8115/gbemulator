@@ -47,11 +47,13 @@ public:
     CatridgeImpl(Mmu& mmu);
 
     void LoadRom(std::vector<uint8_t>&& romData);
-    uint8_t Read(uint8_t address) const;
-    void Write(uint8_t address, uint8_t value);
 
     void EnableBootRom(bool enable);
     bool IsLoaded() const;
+
+    WeakMappedMemoryBlock GetMemoryFixedRomBank() const;
+    WeakMappedMemoryBlock GetMemorySwitchableRomBank() const;
+    WeakMappedMemoryBlock GetMemoryExternalRam() const;
 
 private:
     void ValidateRom();
@@ -62,8 +64,13 @@ private:
     uint8_t m_bankSelected;
     std::vector<uint8_t> m_rom;
     MapperChip m_mapperChip;
-    MappedMemoryBlock m_mappedRom;
-    MappedMemoryBlock m_externalRam;
+
+    MemoryBlock<0x4000> m_fixedRomBank;
+    MemoryBlock<0x4000> m_switchableRomBank;
+    MemoryBlock<0x8000> m_externalRam;
+    std::shared_ptr<MappedMemoryBlock> m_pFixedRomBank;
+    std::shared_ptr<MappedMemoryBlock> m_pSwitchableRomBank;
+    std::shared_ptr<MappedMemoryBlock> m_pExternalRam;
 };
 
 } // namespace detail

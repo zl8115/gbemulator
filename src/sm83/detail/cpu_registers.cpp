@@ -1,4 +1,4 @@
-#include "registers.h"
+#include "detail/cpu_registers.h"
 
 Registers::Registers()
 : a(0), f(0), b(0), c(0),

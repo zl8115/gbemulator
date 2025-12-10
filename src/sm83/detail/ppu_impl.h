@@ -82,10 +82,13 @@ public:
 
     void            SetPpuMode(Mode mode);                 // bit 1 & 0
 
+    WeakMappedMemoryBlock GetMemoryVram() const;
+    WeakMappedMemoryBlock GetMemoryOam() const;
+
 private:
     struct MappedRegisters
     {
-        MappedRegisters(Mmu& mmu);
+        MappedRegisters(PpuImpl& ppu, MmuImpl& mmu);
 
         MappedMemoryBlock vram_tileDataBlock0;
         MappedMemoryBlock vram_tileDataBlock1;
@@ -118,8 +121,12 @@ private:
     IRenderer* m_pRenderer;
     Mmu& m_mmu;
     CCycles m_cycleCounter;
+    MemoryBlock<0x2000> m_vram;
+    MemoryBlock<0x100> m_oam;
     MappedRegisters m_reg;
     FrameBuffer m_viewBuffer;
+    std::shared_ptr<MappedMemoryBlock> m_pMappedVram;
+    std::shared_ptr<MappedMemoryBlock> m_pMappedOam;
 };
 
 } // namespace detail

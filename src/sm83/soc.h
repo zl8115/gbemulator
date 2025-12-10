@@ -4,7 +4,6 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "input.h"
-#include "registers.h"
 #include "catridge.h"
 
 #include <string_view>
@@ -20,7 +19,6 @@ public:
     void RegisterRenderer(IRenderer* pRenderer);
 
     Mmu m_mmu;
-    Registers m_reg;
     Input m_input;
     Cpu m_cpu;
     Ppu m_ppu;

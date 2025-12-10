@@ -1,9 +1,10 @@
-#include "ppu.h"
-#include "ppu_impl.h"
-#include "mmu.h"
+#include "detail/ppu_impl.h"
+
+#include "bitmanip.h"
+#include "detail/mmu_mapped_memory.h"
+#include "mmu_impl.h"
 #include "frame_buffer.h"
 #include "irenderer.h"
-#include "util_bitmanip.h"
 #include "impl_helper.h"
 
 #include <cstdint>
@@ -51,36 +52,43 @@ inline Colour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx,
 }
 
 } // namespace
+
 namespace detail {
 
-PpuImpl::MappedRegisters::MappedRegisters(Mmu& mmu):
-    vram_tileDataBlock0 (ImplHelper::ExtractImpl(mmu), 0x8000, 0x0800),
-    vram_tileDataBlock1 (ImplHelper::ExtractImpl(mmu), 0x8800, 0x0800),
-    vram_tileDataBlock2 (ImplHelper::ExtractImpl(mmu), 0x9000, 0x0800),
-    vram_tileMapBlock0  (ImplHelper::ExtractImpl(mmu), 0x9800, 0x0400),
-    vram_tileMapBlock1  (ImplHelper::ExtractImpl(mmu), 0x9C00, 0x0400),
-    oam                 (ImplHelper::ExtractImpl(mmu), 0xFE00, 0x00A0),
-    lcdControl          (ImplHelper::ExtractImpl(mmu), 0xFF40),
-    lcdStatus           (ImplHelper::ExtractImpl(mmu), 0xFF41),
-    viewScrollX         (ImplHelper::ExtractImpl(mmu), 0xFF42),
-    viewScrollY         (ImplHelper::ExtractImpl(mmu), 0xFF43),
-    lcdYCoord           (ImplHelper::ExtractImpl(mmu), 0xFF44),
-    lcdLYCompare        (ImplHelper::ExtractImpl(mmu), 0xFF45),
-    dmaStartAddress     (ImplHelper::ExtractImpl(mmu), 0xFF46),
-    bgPallete           (ImplHelper::ExtractImpl(mmu), 0xFF47),
-    spritePalette0      (ImplHelper::ExtractImpl(mmu), 0xFF48),
-    spritePalette1      (ImplHelper::ExtractImpl(mmu), 0xFF49),
-    windowPosY          (ImplHelper::ExtractImpl(mmu), 0xFF4A),
-    windowPosX          (ImplHelper::ExtractImpl(mmu), 0xFF4B)
+PpuImpl::MappedRegisters::MappedRegisters(PpuImpl& ppu, MmuImpl& mmu):
+    vram_tileDataBlock0 (ppu.m_vram, 0x0000, 0x0800),
+    vram_tileDataBlock1 (ppu.m_vram, 0x0800, 0x0800),
+    vram_tileDataBlock2 (ppu.m_vram, 0x1000, 0x0800),
+    vram_tileMapBlock0  (ppu.m_vram, 0x1800, 0x0400),
+    vram_tileMapBlock1  (ppu.m_vram, 0x1C00, 0x0400),
+    oam                 (ppu.m_oam,  0x0000, 0x00A0),
+    lcdControl          (mmu.GetMappedRegister(0xFF40)),
+    lcdStatus           (mmu.GetMappedRegister(0xFF41)),
+    viewScrollX         (mmu.GetMappedRegister(0xFF42)),
+    viewScrollY         (mmu.GetMappedRegister(0xFF43)),
+    lcdYCoord           (mmu.GetMappedRegister(0xFF44)),
+    lcdLYCompare        (mmu.GetMappedRegister(0xFF45)),
+    dmaStartAddress     (mmu.GetMappedRegister(0xFF46)),
+    bgPallete           (mmu.GetMappedRegister(0xFF47)),
+    spritePalette0      (mmu.GetMappedRegister(0xFF48)),
+    spritePalette1      (mmu.GetMappedRegister(0xFF49)),
+    windowPosY          (mmu.GetMappedRegister(0xFF4A)),
+    windowPosX          (mmu.GetMappedRegister(0xFF4B))
 {}
 
 PpuImpl::PpuImpl(Mmu& mmu):
     m_pRenderer(nullptr),
     m_mmu(mmu),
-    m_reg(mmu),
+    m_reg(*this, ImplHelper::ExtractImpl(mmu)),
     m_cycleCounter(0),
+    m_vram(),
+    m_oam(),
+    m_pMappedVram(std::make_unique<MappedMemoryBlock>(m_vram, 0, m_vram.size())),
+    m_pMappedOam(std::make_unique<MappedMemoryBlock>(m_oam, 0, m_oam.size())),
     m_viewBuffer(GAMEBOY_WIDTH, GAMEBOY_HEIGHT)
-{}
+{
+    ImplHelper::ExtractImpl(mmu).MapMemory(*this);
+}
 
 void PpuImpl::Step(CCycles cycles)
 {
@@ -276,6 +284,16 @@ void PpuImpl::SetPpuMode(PpuImpl::Mode mode)
     SetBitTo<0>(value, v_mode & 0b01);
     SetBitTo<1>(value, v_mode & 0b10);
     m_reg.lcdStatus.Write(value);
+}
+
+WeakMappedMemoryBlock PpuImpl::GetMemoryVram() const
+{
+    return WeakMappedMemoryBlock(m_pMappedVram);
+}
+
+WeakMappedMemoryBlock PpuImpl::GetMemoryOam() const
+{
+    return WeakMappedMemoryBlock(m_pMappedOam);
 }
 
 /*     ************** Private Methods *************     */

@@ -2,7 +2,6 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "ppu.h"
-#include "registers.h"
 
 #include <filesystem>
 #include <format>
@@ -10,9 +9,8 @@
 
 Soc::Soc():
     m_mmu(),
-    m_reg(),
     m_input(m_mmu),
-    m_cpu(m_mmu, m_reg),
+    m_cpu(m_mmu),
     m_ppu(m_mmu),
     m_catridge(m_mmu)
 {}

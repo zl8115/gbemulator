@@ -17,7 +17,6 @@ public:
     void WriteInput();
 
 private:
-    MappedRegister m_reg;
     bool m_pressedUp;
     bool m_pressedDown;
     bool m_pressedLeft;
@@ -26,6 +25,7 @@ private:
     bool m_pressedB;
     bool m_pressedSelect;
     bool m_pressedStart;
+    MappedRegister m_reg;
 };
 
 } // namespace detail

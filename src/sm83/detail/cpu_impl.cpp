@@ -1,9 +1,12 @@
-#include "cpu_instructions.h"
-#include "cpu_cycles.h"
-#include "util_bitmanip.h"
+#include "detail/cpu_impl.h"
+
+#include "bitmanip.h"
+#include "detail/cpu_cycles.h"
 
 #include <functional>
 #include <stdexcept>
+
+using CpuState = detail::CpuState;
 
 enum class ConditionFlags
 {
@@ -1011,11 +1014,27 @@ std::function<void(CpuState&)> s_CbInstructions[0x100] = {
     ::SET<6,R::B>, ::SET<6,R::C>, ::SET<6,R::D>, ::SET<6,R::E>, ::SET<6,R::H>, ::SET<6,R::L>, ::SET<6,R::IHL>, ::SET<6,R::A>,  ::SET<7,R::B>, ::SET<7,R::C>, ::SET<7,R::D>, ::SET<7,R::E>, ::SET<7,R::H>, ::SET<7,R::L>, ::SET<7,R::IHL>, ::SET<7,R::A>,
 };
 
-CpuInstructions::CpuInstructions(Mmu& mmu, Registers& reg):
-    m_state({mmu, reg, false, false})
+void CbOp(CpuState& state)
+{
+    uint8_t cbOpcode = state.mmu.Read(++state.reg.pc);
+    state.cbOpCodeCycles = s_CbOpcodeCycles[cbOpcode];
+    s_CbInstructions[cbOpcode](state);
+}
+
+namespace detail {
+
+CpuImpl::CpuImpl(Mmu& mmu):
+    m_reg(),
+    m_state({mmu, m_reg, false, false})
 {}
 
-MCycles CpuInstructions::Execute(uint8_t opcode)
+MCycles CpuImpl::Step()
+{
+    auto opcode = m_state.mmu.Read(m_reg.pc);
+    return Execute(opcode);
+}
+
+MCycles CpuImpl::Execute(uint8_t opcode)
 {
     m_state.cbOpCodeCycles = {0};
     m_state.branchTaken = false;
@@ -1032,9 +1051,14 @@ MCycles CpuInstructions::Execute(uint8_t opcode)
     return s_OpCodeCycles[opcode];
 }
 
-void CbOp(CpuState& state)
+Registers& CpuImpl::GetRegister()
 {
-    uint8_t cbOpcode = state.mmu.Read(++state.reg.pc);
-    state.cbOpCodeCycles = s_CbOpcodeCycles[cbOpcode];
-    s_CbInstructions[cbOpcode](state);
+    return m_reg;
 }
+
+const Registers& CpuImpl::GetRegister() const
+{
+    return m_reg;
+}
+
+} // namespace detail

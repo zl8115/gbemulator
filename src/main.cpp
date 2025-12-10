@@ -2,6 +2,8 @@
 #include <format>
 
 #include "soc.h"
+#include "detail/impl_helper.h"
+#include "detail/cpu_impl.h"
 
 template<>
 struct std::formatter<Registers>: std::formatter<std::string> 
@@ -22,7 +24,8 @@ std::ostream& operator<<(std::ostream& os, Registers const& reg)
 
 std::ostream& operator<<(std::ostream& os, Soc const& soc)
 {
-    return os << std::format("Registers: {}", soc.m_reg);
+    const auto& reg = detail::ImplHelper::ExtractImpl(soc.m_cpu).GetRegister();
+    return os << std::format("Registers: {}", reg);
 }
 
 int main()

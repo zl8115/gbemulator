@@ -1,10 +1,10 @@
 #pragma once
 
 #include "cycles.h"
-#include "registers.h"
 #include "mmu.h"
+#include "detail/cpu_registers.h"
 
-#include <stdint.h>
+namespace detail {
 
 struct CpuState
 {
@@ -14,12 +14,19 @@ struct CpuState
     MCycles cbOpCodeCycles; // cycles taken if the cb opcode prefix is taken
 };
 
-class CpuInstructions
+class CpuImpl
 {
 public:
-    CpuInstructions(Mmu& mmu, Registers& reg);
+    CpuImpl(Mmu& mmu);
+    MCycles Step();
     MCycles Execute(uint8_t opcode);
 
+    Registers& GetRegister();
+    const Registers& GetRegister() const;
+
 private:
+    Registers m_reg;
     CpuState m_state;
 };
+
+} // namespace detail

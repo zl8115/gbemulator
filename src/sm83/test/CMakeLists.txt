@@ -24,6 +24,7 @@ target_link_libraries(
 target_include_directories(
     Sm83Tests
     PRIVATE
+    $<BUILD_INTERFACE:${Sm83}/detail>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
 )

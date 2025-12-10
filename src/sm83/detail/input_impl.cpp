@@ -1,12 +1,13 @@
-#include "input_impl.h"
+#include "detail/input_impl.h"
+
+#include "bitmanip.h"
 #include "detail/impl_helper.h"
-#include "util_bitmanip.h"
+#include "detail/mmu_impl.h"
 #include "detail/mmu_reg_names.h"
 
 namespace detail {
 
 InputImpl::InputImpl(Mmu& mmu):
-    m_reg(ImplHelper::ExtractImpl(mmu), REG_BG_PALLETE),
     m_pressedUp(false),
     m_pressedDown(false),
     m_pressedLeft(false),
@@ -14,7 +15,8 @@ InputImpl::InputImpl(Mmu& mmu):
     m_pressedA(false),
     m_pressedB(false),
     m_pressedSelect(false),
-    m_pressedStart(false)
+    m_pressedStart(false),
+    m_reg(ImplHelper::ExtractImpl(mmu).GetMappedRegister(REG_BG_PALLETE))
 {}
 
 void InputImpl::ButtonPressed(GbButton button)

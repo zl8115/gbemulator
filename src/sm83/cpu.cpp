@@ -1,21 +1,21 @@
 #include "cpu.h"
-#include "cpu_instructions.h"
+#include "detail/cpu_impl.h"
 
 #include <cstdint>
 
-Cpu::Cpu(Mmu& mmu, Registers& reg):
-    m_reg(reg),
-    m_mmu(mmu),
-    m_inst(mmu, reg)
+Cpu::Cpu(Mmu& mmu):
+    m_pImpl(std::make_unique<detail::CpuImpl>(mmu))
 {}
+Cpu::~Cpu() = default;
+Cpu::Cpu(Cpu&&) noexcept = default;
+Cpu& Cpu::operator=(Cpu&&) noexcept = default;
 
 MCycles Cpu::Execute(uint8_t opcode)
 {
-    return m_inst.Execute(opcode);
+    return m_pImpl->Execute(opcode);
 }
 
 MCycles Cpu::Step()
 {
-    auto opcode = m_mmu.Read(m_reg.pc);
-    return Execute(opcode);
+    return m_pImpl->Step();
 }

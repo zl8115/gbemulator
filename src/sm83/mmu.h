@@ -1,9 +1,8 @@
 #pragma once
 
-#include "util_bitmanip.h"
+#include "bitmanip.h"
 
 #include <cstdint>
-#include <vector>
 #include <memory>
 
 namespace detail {
