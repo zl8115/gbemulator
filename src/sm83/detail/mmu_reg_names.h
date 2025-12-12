@@ -6,8 +6,8 @@
 constexpr uint16_t REG_P1_JOYPAD                      = 0xFF00;
 constexpr uint16_t REG_LCD_CONTROL                    = 0xFF40;
 constexpr uint16_t REG_BG_PALLETE                     = 0xFF47;
-constexpr uint16_t REG_BOOT_ROM_MAPPING_CONTROL       = 0xFF50;
 constexpr uint16_t REG_DMA_TRANSFER_ADDRESS           = 0xFF46;
+constexpr uint16_t REG_BOOT_ROM_MAPPING_CONTROL       = 0xFF50;
 constexpr uint16_t REG_INTERUPT_ENABLE                = 0xFFFF;
 
 // Register Region Names

@@ -3,6 +3,7 @@
 int main(int argc, char* argv[])
 {
     SdlGb::Gameboy gameboy;
+    gameboy.LoadRom("/home/zerongl/cpu_instrs.gb");
     while(true)
     {
         gameboy.Step();

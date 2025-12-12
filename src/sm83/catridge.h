@@ -23,7 +23,6 @@ public:
     Catridge& operator=(const Catridge&) = delete;
 
     void LoadRom(std::vector<uint8_t>&& romData);
-    void EnableBootRom(bool enable);
     bool IsLoaded() const;
 
 private:

@@ -120,10 +120,6 @@ void run_dynamic_section_test(const json& test_case)
         Cpu& cpu = soc.m_cpu;
         Registers& reg =detail::ImplHelper::ExtractImpl(cpu).GetRegister();
         load_state(reg, mmu, initial);
-        std::cout << static_cast<int>(reg.h) << '|' << static_cast<int>(reg.l) << std::endl;
-        std::cout << static_cast<int>(mmu.Read(52998)) << std::endl;
-        std::cout << static_cast<int>(mmu.Read(52999)) << std::endl;
-        std::cout << static_cast<int>(mmu.Read(61190)) << std::endl;
 
         auto cyclesTaken = cpu.Step().cycles;
         INFO("Initial: " + nlohmann::to_string(initial));

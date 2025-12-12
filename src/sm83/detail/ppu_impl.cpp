@@ -35,13 +35,11 @@ detail::Pallete LoadPallete(detail::MappedRegister& reg)
 inline uint16_t GetTileWord(detail::MappedMemoryBlock& lowerBlock, detail::MappedMemoryBlock& upperBlock, uint8_t tileId)
 {
     // Each tile is 2 bytes, so to get the right relative address, we multiply the index by 2
-    uint16_t address = 0;
+    uint16_t address = tileId * 16;
     if (tileId > 127)
     {
-        address = tileId * 2;
         return ToWord(lowerBlock.Read(address + 1), lowerBlock.Read(address));
     }
-    address = (tileId - 127) * 2;
     return ToWord(upperBlock.Read(address + 1), upperBlock.Read(address));
 }
 

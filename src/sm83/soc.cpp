@@ -35,11 +35,6 @@ void Soc::RegisterRenderer(IRenderer* pRenderer)
 
 namespace {
 
-void ValidateRomDataOrThrow(const std::vector<uint8_t>& romData)
-{
-    // TODO: Validation
-}
-
 std::vector<uint8_t> LoadRomData(std::string_view romPath)
 {
     std::filesystem::path fp(romPath);
@@ -73,6 +68,5 @@ std::vector<uint8_t> LoadRomData(std::string_view romPath)
 void Soc::LoadRomFromFile(std::string_view romPath)
 {
     auto data = LoadRomData(romPath);
-    ValidateRomDataOrThrow(data);
     m_catridge.LoadRom(std::move(data));
 }

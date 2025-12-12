@@ -21,7 +21,7 @@ public:
     {}
 
     uint8_t Read() const { return m_reg; }
-    void Write(uint8_t byte) { m_reg = byte; };
+    virtual void Write(uint8_t byte) { m_reg = byte; };
 
 private:
     uint8_t& m_reg;
@@ -48,7 +48,8 @@ public:
         return m_region[relativeAddress];
     }
 
-    void Write(uint16_t relativeAddress, uint8_t byte)
+    // Virtual to allow listeners to read what is written to address
+    virtual void Write(uint16_t relativeAddress, uint8_t byte)
     {
         if (relativeAddress > m_region.size())
         {
@@ -57,7 +58,12 @@ public:
         m_region[relativeAddress] = byte;
     };
 
-private:
+    std::size_t size()
+    {
+        return m_region.size();
+    }
+
+protected:
     std::span<uint8_t> m_region;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mmu_mapped_memory.h"
+#include "catridge_mbc.h"
 
 #include <cstdint>
 #include <vector>
@@ -48,7 +49,6 @@ public:
 
     void LoadRom(std::vector<uint8_t>&& romData);
 
-    void EnableBootRom(bool enable);
     bool IsLoaded() const;
 
     WeakMappedMemoryBlock GetMemoryFixedRomBank() const;
@@ -57,20 +57,36 @@ public:
 
 private:
     void ValidateRom();
+    void LoadBootRom();
+    void SwitchRomBanks();
+    void SwitchRamBanks();
+
+    bool HandleBootRomRegWrite(uint8_t value);
+    bool HandleFixedRomWrite(uint16_t address, uint8_t value);
+    bool HandleSwitchableRomWrite(uint16_t address, uint8_t value);
+    bool HandleExternalRamWrite(uint16_t address, uint8_t value);
+
     uint32_t GetBankOffset(uint8_t address) const;
 
     bool m_ramEnable;
     bool m_bootRomEnabled;
-    uint8_t m_bankSelected;
-    std::vector<uint8_t> m_rom;
+    bool m_bankingMode;
+    uint8_t m_switchableBankSelect;
+    uint8_t m_ramBankSelect;
+    uint8_t m_romSize;
+    uint8_t m_ramSize;
     MapperChip m_mapperChip;
+
+    std::shared_ptr<CatridgeMemoryBlockController> m_pFixedRomBank;
+    std::shared_ptr<CatridgeMemoryBlockController> m_pSwitchableRomBank;
+    std::shared_ptr<CatridgeMemoryBlockController> m_pExternalRam;
+    CatridgeBootRomRegister m_bootRomReg;
 
     MemoryBlock<0x4000> m_fixedRomBank;
     MemoryBlock<0x4000> m_switchableRomBank;
     MemoryBlock<0x8000> m_externalRam;
-    std::shared_ptr<MappedMemoryBlock> m_pFixedRomBank;
-    std::shared_ptr<MappedMemoryBlock> m_pSwitchableRomBank;
-    std::shared_ptr<MappedMemoryBlock> m_pExternalRam;
+
+    std::vector<uint8_t> m_rom;
 };
 
 } // namespace detail
