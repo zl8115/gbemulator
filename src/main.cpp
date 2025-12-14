@@ -4,6 +4,9 @@
 #include "soc.h"
 #include "detail/impl_helper.h"
 #include "detail/cpu_impl.h"
+#include "detail/cpu_registers.h"
+
+using Registers = detail::Registers;
 
 template<>
 struct std::formatter<Registers>: std::formatter<std::string> 

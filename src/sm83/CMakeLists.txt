@@ -21,10 +21,10 @@ add_library(Sm83 STATIC
     detail/catridge_impl.cpp
     detail/cpu_cycles.cpp
     detail/cpu_impl.cpp
-    detail/cpu_registers.cpp
     detail/input_impl.cpp
     detail/mmu_impl.cpp
     detail/ppu_impl.cpp
+    detail/timer.cpp
 )
 target_include_directories(
     Sm83

@@ -59,7 +59,12 @@ private:
     void ValidateRom();
     void LoadBootRom();
     void SwitchRomBanks();
+
     void SwitchRamBanks();
+    void SwitchFixedRom(bool useFixed, uint16_t offset);
+
+    void SwitchSwitchableRom(bool useFixed, uint16_t offset);
+    void SwitchExternalRam(bool useFixed, uint16_t offset);
 
     bool HandleBootRomRegWrite(uint8_t value);
     bool HandleFixedRomWrite(uint16_t address, uint8_t value);

@@ -11,14 +11,14 @@
 
 namespace detail {
 
-class Pallete 
+class Palette
 {
 public:
-    Pallete():
+    Palette():
         m_colours({Colour::White, Colour::LightGrey, Colour::DarkGrey, Colour::Black})
     {}
 
-    Pallete(Colour c0, Colour c1, Colour c2, Colour c3):
+    Palette(Colour c0, Colour c1, Colour c2, Colour c3):
         m_colours({c0, c1, c2, c3})
     {}
 
@@ -60,6 +60,8 @@ public:
     void Step(CCycles cycles);
     void Render() const;
     void RegisterRenderer(IRenderer* pRenderer);
+    void SetDisplayOn();
+    void SetDisplayOff();
     const FrameBuffer& GetViewBuffer() const;
 
     // LCD Control Checks
@@ -103,7 +105,7 @@ private:
         MappedRegister lcdYCoord;
         MappedRegister lcdLYCompare;
         MappedRegister dmaStartAddress;
-        MappedRegister bgPallete;
+        MappedRegister bgPalette;
         MappedRegister spritePalette0;
         MappedRegister spritePalette1;
         MappedRegister windowPosY;
@@ -115,6 +117,7 @@ private:
 
     void DrawBGLine(uint8_t line);
     void DrawWindowLine(uint8_t line);
+    void DrawSprite(uint8_t spriteId);
     uint16_t GetObjTile(uint8_t tileId);
     uint16_t GetBGOrWindowTile(uint8_t tileId);
 

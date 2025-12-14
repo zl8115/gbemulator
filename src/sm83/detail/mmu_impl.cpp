@@ -92,7 +92,7 @@ uint8_t MmuImpl::Read(const uint16_t address) const
         return m_highRam.at(relativeAddress);
     }
 
-    if (address == REG_INTERUPT_ENABLE)
+    if (address == REG_INTERRUPT_ENABLE)
     {
         return m_interruptEnable;
     }
@@ -179,7 +179,7 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
         return;
     }
 
-    if (address == REG_INTERUPT_ENABLE)
+    if (address == REG_INTERRUPT_ENABLE)
     {
         m_interruptEnable = byte;
         return;
@@ -193,7 +193,7 @@ void MmuImpl::DmaTransfer(uint16_t address)
     if (m_testMode)
         return;
 
-    uint16_t startAddress = address * 0x100;
+    uint16_t startAddress = address / 0x100;
     constexpr auto OAM_SIZE = REGION_OAM_END - REGION_OAM_START + 1;
     for (int ii = 0; ii < sizeof(uint8_t) * OAM_SIZE; ++ii)
     {

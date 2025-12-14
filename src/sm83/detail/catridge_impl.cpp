@@ -10,7 +10,8 @@
 #include <utility>
 #include <cstring>
 
-constexpr uint32_t BANK_SIZE = REGION_CATRIDGE_SWITCHABLE_END - REGION_CATRIDGE_SWITCHABLE_START + 1;
+constexpr bool UseFixedMemory = true;
+constexpr bool DoNotUseFixedMemory = false;
 
 namespace detail {
 
@@ -21,7 +22,7 @@ CatridgeImpl::CatridgeImpl(Mmu& mmu):
     m_switchableBankSelect(0),
     m_ramBankSelect(0),
     m_romSize(2),
-    m_ramSize(2),
+    m_ramSize(0),
     m_mapperChip(MapperChip::ROM_ONLY),
     m_pFixedRomBank(),
     m_pSwitchableRomBank(),
@@ -58,15 +59,15 @@ void CatridgeImpl::LoadRom(std::vector<uint8_t>&& romData)
 
     std::memcpy(m_fixedRomBank.data(), m_rom.data(), m_fixedRomBank.size());
     LoadBootRom();
+    SwitchFixedRom(UseFixedMemory, 0);
+    SwitchSwitchableRom(DoNotUseFixedMemory, 0x4000); // Memory Bank 1
+    SwitchExternalRam(UseFixedMemory, 0); // I don't actually know what to do with this...
 }
 
 void CatridgeImpl::LoadBootRom()
 {
     m_bootRomEnabled = true;
     std::memcpy(m_fixedRomBank.data(), bootDMG.data(), bootDMG.size());
-
-    MappedMemoryBlock& fixedRomBank = *m_pFixedRomBank;
-    fixedRomBank = MappedMemoryBlock(m_rom, 0, m_fixedRomBank.size());
 }
 
 bool CatridgeImpl::IsLoaded() const
@@ -89,6 +90,7 @@ WeakMappedMemoryBlock CatridgeImpl::GetMemoryExternalRam() const
     return WeakMappedMemoryBlock(m_pExternalRam);
 }
 
+/*     ************** Private Methods *************     */
 void CatridgeImpl::ValidateRom()
 {
     // TODO: Validation
@@ -121,9 +123,7 @@ void CatridgeImpl::SwitchRomBanks()
     // TODO: Bit mask with maximum number of banks
 
     std::size_t offset = adjustedBankSelection * 0x4000;
-
-    MappedMemoryBlock& externalRam = *m_pExternalRam;
-    externalRam = MappedMemoryBlock(m_externalRam, offset, m_externalRam.size());
+    SwitchExternalRam(DoNotUseFixedMemory, offset);
 }
 
 void CatridgeImpl::SwitchRamBanks()
@@ -142,11 +142,44 @@ void CatridgeImpl::SwitchRamBanks()
     std::size_t adjustedBankSelection = (m_ramBankSelect & 0x3);
     std::size_t offset = adjustedBankSelection * 0x4000;
 
-    MappedMemoryBlock& fixedRomBank = *m_pFixedRomBank;
-    fixedRomBank = MappedMemoryBlock(m_rom, offset, m_fixedRomBank.size());
+    SwitchFixedRom(DoNotUseFixedMemory, offset);
+    SwitchSwitchableRom(DoNotUseFixedMemory, offset);
+}
 
-    MappedMemoryBlock& switchableRomBank = *m_pSwitchableRomBank;
-    switchableRomBank = MappedMemoryBlock(m_rom, offset, m_switchableRomBank.size());
+namespace {
+
+template <std::size_t N>
+void SwitchMemoryBlock(
+    MappedMemoryBlock& mappedMemoryBlock,
+    MemoryBlock<N>& fixedMemoryBlock,
+    std::vector<uint8_t>& dynamicMemoryBlock,
+    bool useFixed,
+    uint16_t offset)
+
+{
+    if (useFixed)
+    {
+        mappedMemoryBlock = MappedMemoryBlock(fixedMemoryBlock, 0, N);
+        return;
+    }
+    mappedMemoryBlock = MappedMemoryBlock(dynamicMemoryBlock, offset, N);
+}
+
+}
+
+void CatridgeImpl::SwitchFixedRom(bool useFixed, uint16_t offset)
+{
+    SwitchMemoryBlock(*m_pFixedRomBank, m_fixedRomBank, m_rom, useFixed, offset);
+}
+
+void CatridgeImpl::SwitchSwitchableRom(bool useFixed, uint16_t offset)
+{
+    SwitchMemoryBlock(*m_pSwitchableRomBank, m_switchableRomBank, m_rom, useFixed, offset);
+}
+
+void CatridgeImpl::SwitchExternalRam(bool useFixed, uint16_t offset)
+{
+    SwitchMemoryBlock(*m_pExternalRam, m_externalRam, m_rom, useFixed, offset);
 }
 
 bool CatridgeImpl::HandleFixedRomWrite(uint16_t address, uint8_t value)

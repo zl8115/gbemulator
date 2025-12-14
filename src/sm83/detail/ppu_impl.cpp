@@ -2,6 +2,7 @@
 
 #include "bitmanip.h"
 #include "detail/mmu_mapped_memory.h"
+#include "detail/mmu_reg_names.h"
 #include "mmu_impl.h"
 #include "frame_buffer.h"
 #include "irenderer.h"
@@ -19,15 +20,17 @@ static const CCycles CLOCKS_PER_VBLANK = 4560; /* Mode 1 */
 static const CCycles SCANLINES_PER_FRAME = 144;
 static const CCycles CLOCKS_PER_FRAME = (CLOCKS_PER_SCANLINE * SCANLINES_PER_FRAME) + CLOCKS_PER_VBLANK;
 
+static const uint16_t SPRITE_BYTES = 4;
+
 namespace {
 
-detail::Pallete LoadPallete(detail::MappedRegister& reg)
+detail::Palette LoadPalette(detail::MappedRegister& reg)
 {
-    uint8_t palleteValue = reg.Read();
-    Colour c0 = static_cast<Colour>((palleteValue & 0b00000011));
-    Colour c1 = static_cast<Colour>((palleteValue & 0b00001100) >> 2);
-    Colour c2 = static_cast<Colour>((palleteValue & 0b00110000) >> 4);
-    Colour c3 = static_cast<Colour>((palleteValue & 0b11000000) >> 6);
+    uint8_t paletteValue = reg.Read();
+    Colour c0 = static_cast<Colour>((paletteValue & 0b00000011));
+    Colour c1 = static_cast<Colour>((paletteValue & 0b00001100) >> 2);
+    Colour c2 = static_cast<Colour>((paletteValue & 0b00110000) >> 4);
+    Colour c3 = static_cast<Colour>((paletteValue & 0b11000000) >> 6);
 
     return {c0, c1, c2, c3};
 }
@@ -43,10 +46,10 @@ inline uint16_t GetTileWord(detail::MappedMemoryBlock& lowerBlock, detail::Mappe
     return ToWord(upperBlock.Read(address + 1), upperBlock.Read(address));
 }
 
-inline Colour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx, const detail::Pallete& pallete)
+inline Colour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx, const detail::Palette& palette)
 {
     unsigned short pixel = CheckBit(Msb(tileData), pixelIdx) >> 1 | CheckBit(Lsb(tileData), pixelIdx);
-    return pallete[pixel];
+    return palette[pixel];
 }
 
 } // namespace
@@ -60,18 +63,18 @@ PpuImpl::MappedRegisters::MappedRegisters(PpuImpl& ppu, MmuImpl& mmu):
     vram_tileMapBlock0  (ppu.m_vram, 0x1800, 0x0400),
     vram_tileMapBlock1  (ppu.m_vram, 0x1C00, 0x0400),
     oam                 (ppu.m_oam,  0x0000, 0x00A0),
-    lcdControl          (mmu.GetMappedRegister(0xFF40)),
-    lcdStatus           (mmu.GetMappedRegister(0xFF41)),
-    viewScrollX         (mmu.GetMappedRegister(0xFF42)),
-    viewScrollY         (mmu.GetMappedRegister(0xFF43)),
-    lcdYCoord           (mmu.GetMappedRegister(0xFF44)),
-    lcdLYCompare        (mmu.GetMappedRegister(0xFF45)),
-    dmaStartAddress     (mmu.GetMappedRegister(0xFF46)),
-    bgPallete           (mmu.GetMappedRegister(0xFF47)),
-    spritePalette0      (mmu.GetMappedRegister(0xFF48)),
-    spritePalette1      (mmu.GetMappedRegister(0xFF49)),
-    windowPosY          (mmu.GetMappedRegister(0xFF4A)),
-    windowPosX          (mmu.GetMappedRegister(0xFF4B))
+    lcdControl          (mmu.GetMappedRegister(REG_LCD_CONTROL)),
+    lcdStatus           (mmu.GetMappedRegister(REG_LCD_STATUS)),
+    viewScrollX         (mmu.GetMappedRegister(REG_LCD_VIEW_SCROLL_X)),
+    viewScrollY         (mmu.GetMappedRegister(REG_LCD_VIEW_SCROLL_Y)),
+    lcdYCoord           (mmu.GetMappedRegister(REG_LCD_VIEW_POS_X)),
+    lcdLYCompare        (mmu.GetMappedRegister(REG_LCD_VIEW_POS_Y)),
+    dmaStartAddress     (mmu.GetMappedRegister(REG_DMA_TRANSFER_ADDRESS)),
+    bgPalette           (mmu.GetMappedRegister(REG_BG_PALETTE)),
+    spritePalette0      (mmu.GetMappedRegister(REG_SPRITE_PALETTE_0)),
+    spritePalette1      (mmu.GetMappedRegister(REG_SPRITE_PALETTE_1)),
+    windowPosY          (mmu.GetMappedRegister(REG_WINDOW_POS_Y)),
+    windowPosX          (mmu.GetMappedRegister(REG_WINDOW_POS_X))
 {}
 
 PpuImpl::PpuImpl(Mmu& mmu):
@@ -113,6 +116,7 @@ void PpuImpl::Step(CCycles cycles)
                 if (line == 144)
                 {
                     SetPpuMode(Mode::VBLANK);
+                    WriteSprites();
                     m_mmu.UnsetInterruptFlag<Mmu::InterruptType::VBLANK>();
                 }
                 else
@@ -182,6 +186,26 @@ void PpuImpl::Render() const
     {
         m_pRenderer->Render(m_viewBuffer);
     }
+}
+
+void PpuImpl::SetDisplayOn()
+{
+    auto value = m_reg.lcdControl.Read();
+    SetBitToTrue<0>(value);
+    SetBitToTrue<1>(value);
+    SetBitToTrue<5>(value);
+    SetBitToTrue<7>(value);
+    m_reg.lcdControl.Write(value);
+}
+
+void PpuImpl::SetDisplayOff()
+{
+    auto value = m_reg.lcdControl.Read();
+    SetBitToFalse<0>(value);
+    SetBitToFalse<1>(value);
+    SetBitToFalse<5>(value);
+    SetBitToFalse<7>(value);
+    m_reg.lcdControl.Write(value);
 }
 
 void PpuImpl::RegisterRenderer(IRenderer* pRenderer)
@@ -315,12 +339,20 @@ void PpuImpl::WriteScanline(uint8_t line)
 
 void PpuImpl::WriteSprites()
 {
-    // TODO: Do
+    if (!IsDisplayOn() || !IsObjectEnabled())
+    {
+        return;
+    }
+
+    for (int ii = 0; ii < 40; ++ii)
+    {
+        DrawSprite(ii);
+    }
 }
 
 void PpuImpl::DrawBGLine(uint8_t line)
 {
-    Pallete pallete = ::LoadPallete(m_reg.bgPallete);
+    Palette palette = ::LoadPalette(m_reg.bgPalette);
     uint screenY = line;
 
     uint scrolledY = screenY + m_reg.viewScrollY.Read();
@@ -357,7 +389,7 @@ void PpuImpl::DrawBGLine(uint8_t line)
         /* Calculate the offset from the start of the tile data memory where
          * the data for our tile lives */
         uint16_t tile = GetBGOrWindowTile(tileId);
-        Colour pixelColour = GetColourFromTile(tile, tilePixelX, pallete);
+        Colour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
 
         m_viewBuffer.SetPixel(screenX, screenY, pixelColour);
     }
@@ -366,17 +398,16 @@ void PpuImpl::DrawBGLine(uint8_t line)
 void PpuImpl::DrawWindowLine(uint8_t line)
 {
     uint screenY = line;
-    uint scrolledY = screenY - m_reg.windowPosY.Read();
-    if (scrolledY >= GAMEBOY_HEIGHT)
+    uint windowY = screenY - m_reg.windowPosY.Read();
+    if (windowY >= GAMEBOY_HEIGHT)
     {
         return;
     }
 
-    uint bgMapY = scrolledY % BG_MAP_SIZE;
-    uint tileY = bgMapY / TILE_HEIGHT_PX;
-    uint tilePixelY = bgMapY % TILE_HEIGHT_PX;
+    uint tileY = windowY / TILE_HEIGHT_PX;
+    uint tilePixelY = windowY % TILE_HEIGHT_PX;
 
-    Pallete pallete = ::LoadPallete(m_reg.bgPallete);
+    Palette palette = ::LoadPalette(m_reg.bgPalette);
     const bool UseTileMap0 = GetBGAndWindowTileMapAreaType() == TileMapAreaType::ZERO;
     MappedMemoryBlock& tileMap = UseTileMap0
                                     ? m_reg.vram_tileMapBlock0
@@ -386,16 +417,16 @@ void PpuImpl::DrawWindowLine(uint8_t line)
     {
         /* Work out the position of the pixel in the framebuffer */
         uint scrolledX = screenX + m_reg.windowPosX.Read() - 7;
+        if (scrolledX >= GAMEBOY_WIDTH)
+            return;
 
         /* Work out which tile of the bg_map this pixel is in, and the index of that tile
          * in the array of all tiles */
         uint tileX = scrolledX / TILE_WIDTH_PX;
-
-        /* Work out which specific (x,y) inside that tile we're going to render */
         uint tilePixelX = scrolledX % TILE_WIDTH_PX;
 
         /* Work out the address of the tile ID from the tile map */
-        uint tileIdx = tileY * TILES_PER_LINE + tileX;
+        uint tileIdx = (tileY * TILES_PER_LINE) + tileX;
 
         /* Grab the ID of the tile we'll get data from in the tile map */
         uint8_t tileId = tileMap.Read(tileIdx);
@@ -403,9 +434,84 @@ void PpuImpl::DrawWindowLine(uint8_t line)
         /* Calculate the offset from the start of the tile data memory where
          * the data for our tile lives */
         uint16_t tile = GetBGOrWindowTile(tileId);
-        Colour pixelColour = GetColourFromTile(tile, tilePixelX, pallete);
+        Colour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
 
         m_viewBuffer.SetPixel(screenX, screenY, pixelColour);
+    }
+}
+
+void PpuImpl::DrawSprite(uint8_t spriteId)
+{
+    // Load Object Attribute
+    uint16_t oamAddress = spriteId * SPRITE_BYTES;
+
+    // Directly read from oam since we have access
+    uint8_t spriteY = m_oam.at(oamAddress);
+    uint8_t spriteX = m_oam.at(oamAddress + 1);
+
+    // Skip if the sprite is offscreen
+    if (spriteY == 0 || spriteY >= 160) { return; }
+    if (spriteX == 0 || spriteX >= 168) { return; }
+
+    uint8_t tileIdx = m_oam.at(oamAddress + 2);
+    bool largePixelMode = CheckBit<4>(m_reg.lcdControl.Read());
+
+    uint8_t spriteFlags = m_oam.at(oamAddress + 3);
+    if (largePixelMode)
+    {
+        // In Large Pixel mode (8x16), 
+        SetBitToFalse<0>(tileIdx);
+    }
+
+    /* Bits 0-3 are used only for CGB */
+    bool usePalette1 = CheckBit<4>(spriteFlags);
+    bool flipX = CheckBit<5>(spriteFlags);
+    bool flipY = CheckBit<6>(spriteFlags);
+    bool priorityFlag = CheckBit<7>(spriteFlags);
+
+    Palette palette = usePalette1
+        ? LoadPalette(m_reg.spritePalette1)
+        : LoadPalette(m_reg.spritePalette0);
+
+    int startY = spriteY - 16;
+    int startX = spriteX - 8;
+
+    uint16_t maxTileOffset = (largePixelMode) ? 2 : 1;
+    for (uint16_t tileOffset = 0; tileOffset < maxTileOffset; ++tileOffset)
+    {
+        startY += tileOffset * TILE_HEIGHT_PX;
+        uint16_t tileData = GetObjTile(tileIdx + tileOffset);
+
+        for (uint16_t y = 0; y < TILE_HEIGHT_PX; y++)
+        {
+            for (uint16_t x = 0; x < TILE_WIDTH_PX; x++)
+            {
+                uint16_t maybe_flipped_y = !flipY
+                    ? y
+                    : TILE_HEIGHT_PX - y - 1;
+
+                uint16_t maybe_flipped_x = !flipX
+                    ? x
+                    : TILE_WIDTH_PX - x - 1;
+
+                int screenX = startX + x;
+                if (screenX < 0 || screenX >= GAMEBOY_WIDTH) { continue; }
+
+                int screenY = startY + y;
+                if (screenY < 0 || screenY >= GAMEBOY_HEIGHT) { continue; }
+
+                uint8_t pixelIdx = (y * TILE_HEIGHT_PX) + x;
+                Colour colour = GetColourFromTile(tileData, pixelIdx, palette);
+
+                // Color 0 is transparent
+                if (colour == Colour::White) { continue; }
+
+                auto existingPixel = m_viewBuffer.GetPixel(x, y);
+                if (priorityFlag && existingPixel != Colour::White) { continue; }
+
+                m_viewBuffer.SetPixel(screenX, screenY, colour);
+            }
+        }
     }
 }
 

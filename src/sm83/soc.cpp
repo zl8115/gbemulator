@@ -3,6 +3,10 @@
 #include "mmu.h"
 #include "ppu.h"
 
+#include "detail/cpu_impl.h"
+#include "detail/impl_helper.h"
+#include "detail/mmu_impl.h"
+
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -69,4 +73,15 @@ void Soc::LoadRomFromFile(std::string_view romPath)
 {
     auto data = LoadRomData(romPath);
     m_catridge.LoadRom(std::move(data));
+
+    m_ppu.SetDisplayOn();
 }
+
+void Soc::EnableUnitTestMode()
+{
+    // Some of the tests (e.g. CB 66 01FD) do not respect some of the MMU
+    // Echo RAM / DMA transfer flags, so we need to enable the test mode
+    detail::ImplHelper::ExtractImpl(m_mmu).EnableTestMode();
+    detail::ImplHelper::ExtractImpl(m_cpu).EnableTestMode();
+}
+

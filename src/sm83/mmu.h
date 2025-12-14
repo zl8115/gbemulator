@@ -67,9 +67,12 @@ public:
         Write(0xFFFF, value);
     }
 
-    uint8_t ei = 0;
-    uint8_t ime = 0;
-    uint8_t ie = 0;
+    template <InterruptType Type>
+    bool HasInterrupt()
+    {
+        uint8_t value = Read(0xFF0F) & Read(0xFFFF);
+        return CheckBit<static_cast<std::size_t>(Type)>(value);
+    }
 
 private:
     std::unique_ptr<detail::MmuImpl> m_pImpl;

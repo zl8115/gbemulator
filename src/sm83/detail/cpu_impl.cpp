@@ -2,6 +2,7 @@
 
 #include "bitmanip.h"
 #include "detail/cpu_cycles.h"
+#include "detail/mmu_reg_names.h"
 
 #include <functional>
 #include <stdexcept>
@@ -487,9 +488,16 @@ template <R Dst>
 void Pop(CpuState& state) requires LargeReg<Dst>
 {
     auto lobyte = state.mmu.Read(state.reg.sp++);
-    auto hibyte = state.mmu.Read(state.reg.sp++);;
+    auto hibyte = state.mmu.Read(state.reg.sp++);
     SetWord<Dst>(state, ToWord(hibyte, lobyte));
     ++state.reg.pc;
+}
+
+void PopPc(CpuState& state)
+{
+    auto lobyte = state.mmu.Read(state.reg.sp++);
+    auto hibyte = state.mmu.Read(state.reg.sp++);
+    state.reg.pc = ToWord(hibyte, lobyte);
 }
 
 template <R Dst>
@@ -499,6 +507,12 @@ void Push(CpuState& state) requires LargeReg<Dst>
     state.mmu.Write(--state.reg.sp, Msb(data));
     state.mmu.Write(--state.reg.sp, Lsb(data));
     ++state.reg.pc;
+}
+
+void PushPc(CpuState& state)
+{
+    state.mmu.Write(--state.reg.sp, Msb(state.reg.pc));
+    state.mmu.Write(--state.reg.sp, Lsb(state.reg.pc));
 }
 
 /*     ************** Conditional Ops *************     */
@@ -544,8 +558,7 @@ void Call(CpuState& state)
     {
         state.branchTaken = true;
         auto nn = ToWord(hibyte, lobyte);
-        state.mmu.Write(--state.reg.sp, Msb(state.reg.pc));
-        state.mmu.Write(--state.reg.sp, Lsb(state.reg.pc));
+        PushPc(state);
         state.reg.pc = nn;
     }
 }
@@ -557,9 +570,7 @@ void Ret(CpuState& state)
     if (ConditionCheck<Cnd>(state))
     {
         state.branchTaken = true;
-        auto lobyte = state.mmu.Read(state.reg.sp++);
-        auto hibyte = state.mmu.Read(state.reg.sp++);
-        state.reg.pc = ToWord(hibyte, lobyte);
+        PopPc(state);
     }
 }
 
@@ -568,8 +579,7 @@ template <uint8_t Op>
 void Rst(CpuState& state)
 {
     ++state.reg.pc;
-    state.mmu.Write(--state.reg.sp, Msb(state.reg.pc));
-    state.mmu.Write(--state.reg.sp, Lsb(state.reg.pc));
+    PushPc(state);
     state.reg.pc = Op;
 }
 
@@ -588,16 +598,19 @@ void Noop(CpuState& state)
 void Stop(CpuState& state)
 {
     // TODO: Properly implement
-    state.mmu.ime = 0;
+    // state.reg.ime = 0;
     ++state.reg.pc;
 }
 
 void Halt(CpuState& state)
 {
-    constexpr int interrupt_flag = 0;     // TODO: Properly implement
-
-    if ((state.mmu.ime == 0) && (state.mmu.ie & interrupt_flag) != 0)
-      return;
+    state.halted = true;
+    if ((state.reg.ime == 0) && (state.mmu.Read(REG_INTERRUPT_ENABLE) & state.mmu.Read(REG_INTERRUPT_FLAG)) != 0)
+    {
+        // Halt Bug: Exit but 'fail' to increment pc, but other side effects is handled elsewhere
+        state.haltBug = true;
+        return;
+    }
     ++state.reg.pc;
 }
 
@@ -919,25 +932,25 @@ void CCF(CpuState& state)
 }
 
 /*     ************** Misc Ops *************     */
-void RetI(CpuState& state)
-{
-    auto Z = state.mmu.Read(state.reg.sp++);
-    auto W = state.mmu.Read(state.reg.sp++);
-    state.reg.pc = ToWord(W,Z);
-    state.mmu.ime = 1;
-}
-
 void DisI(CpuState& state)
 {
-    state.mmu.ime = 0;
+    state.reg.ime = 0;
     ++state.reg.pc;
 }
 
 void EnaI(CpuState& state)
 {
-    // TODO: Properly implement
-    state.mmu.ei = 1;
+    state.enableInterruptDelay = 0;
     ++state.reg.pc;
+}
+
+void RetI(CpuState& state)
+{
+    // Effectively an `ei` (EnaI) and `ret`,
+    // but here we skip the enableInterruptDelay
+    // and directly set the ime
+    PopPc(state);
+    state.reg.ime = 1;
 }
 
 } // namespace
@@ -948,7 +961,7 @@ std::function<void(CpuState&)> s_Instructions[0x100] = {
     // 0x0X
     ::Noop, ::Load<R::BC,R::NN>, ::Load<R::BC,R::A>, ::Inc<R::BC>, ::Inc<R::B>, ::Dec<R::B>, ::Load<R::B,R::N>, ::RLCA, ::Load<R::NN,R::SP>, ::Add<R::HL,R::BC>, ::Load<R::A,R::BC>, ::Dec<R::BC>, ::Inc<R::C>, ::Dec<R::C>, ::Load<R::C,R::N>, ::RRCA,
     // 0x1X
-    ::Noop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump<C::NONE>, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
+    ::Stop, ::Load<R::DE,R::NN>, ::Load<R::DE,R::A>, ::Inc<R::DE>, ::Inc<R::D>, ::Dec<R::D>, ::Load<R::D,R::N>, ::RLA, ::RelativeJump<C::NONE>, ::Add<R::HL,R::DE>, ::Load<R::A,R::DE>, ::Dec<R::DE>, ::Inc<R::E>, ::Dec<R::E>, ::Load<R::E,R::N>, ::RRA,
     // 0x2X
     ::RelativeJump<C::NZ>, ::Load<R::HL,R::NN>, ::Load<R::HLI,R::A>, ::Inc<R::HL>, ::Inc<R::H>, ::Dec<R::H>, ::Load<R::H,R::N>, ::DAA, ::RelativeJump<C::Z>, ::Add<R::HL,R::HL>, ::Load<R::A,R::HLI>, ::Dec<R::HL>, ::Inc<R::L>, ::Dec<R::L>, ::Load<R::L,R::N>, ::CPL,
     // 0x3X
@@ -1024,20 +1037,47 @@ void CbOp(CpuState& state)
 namespace detail {
 
 CpuImpl::CpuImpl(Mmu& mmu):
+    m_disableInterruptHandling(false),
     m_reg(),
-    m_state({mmu, m_reg, false, false})
+    m_state({false, false, false, false, false, -1, mmu, m_reg}),
+    m_timer(mmu)
 {}
 
 MCycles CpuImpl::Step()
 {
+    if (m_state.halted)
+        CheckForInterrupts();
+
+    if (m_state.interruptPending)
+        return HandleInterrupts();
+    else if (m_state.halted)
+        return {1};
+
     auto opcode = m_state.mmu.Read(m_reg.pc);
-    return Execute(opcode);
+    if (m_state.haltBug)
+    {
+        m_state.haltBug = false;
+
+        // Halt Bug: `halt` has failed to increment `pc`, so the next instruction is read twice?
+        // TODO: Handle edge case of halt bug (I.e. `halt` is followed up by a `jmp`; `halt` is preceded by `ei` and followed by `rst`)
+        opcode = m_state.mmu.Read(m_reg.pc + 1);
+    }
+
+    MCycles cycles = Execute(opcode);
+    CheckForInterrupts();
+    m_timer.Step(cycles);
+    return cycles;
 }
 
 MCycles CpuImpl::Execute(uint8_t opcode)
 {
-    m_state.cbOpCodeCycles = {0};
     m_state.branchTaken = false;
+    m_state.cbOpCodeCycles = {0};
+
+    if (opcode == 0x10) // STOP
+    {
+        m_timer.PauseClock();
+    }
 
     s_Instructions[opcode](m_state);
     if (m_state.cbOpCodeCycles.cycles != 0)
@@ -1061,4 +1101,72 @@ const Registers& CpuImpl::GetRegister() const
     return m_reg;
 }
 
+int CpuImpl::GetEi() const
+{
+    return m_state.enableInterruptDelay == 1
+        ? 1  // Next Step() will set IME
+        : 0; // Next Step() does nothing to IME
+}
+
+void CpuImpl::EnableTestMode()
+{
+    // m_disableInterruptHandling = true;
+    m_timer.PauseClock();
+}
+
+void CpuImpl::HandleEnableInterrupt()
+{
+    // EI not set
+    if (m_state.enableInterruptDelay < 0)
+        return;
+
+    // EI just set
+    else if (m_state.enableInterruptDelay == 0)
+        ++m_state.enableInterruptDelay;
+
+    // Delayed EI set
+    else if (m_state.enableInterruptDelay >= 1)
+    {
+        m_reg.ime = 1;
+        m_state.enableInterruptDelay = -1;
+    }
+}
+
+void CpuImpl::CheckForInterrupts()
+{
+    HandleEnableInterrupt();
+
+    if (m_disableInterruptHandling || !m_reg.ime)
+        return;
+
+    auto interrupt_enable = m_state.mmu.Read(REG_INTERRUPT_ENABLE);
+    auto interrupt_flag = m_state.mmu.Read(REG_INTERRUPT_FLAG);
+    auto interrupts = interrupt_enable & interrupt_flag;
+    if (!interrupts)
+        return;
+
+    m_state.interruptPending = true;
+}
+
+MCycles CpuImpl::HandleInterrupts()
+{
+    if (!m_state.interruptPending)
+        return {0};
+
+    m_state.halted = false;
+    m_state.interruptPending = false;
+    PushPc(m_state);
+
+    if (HandleInterrupt<Mmu::InterruptType::VBLANK>())
+        return {5};
+    if (HandleInterrupt<Mmu::InterruptType::LCD>())
+        return {5};
+    if (HandleInterrupt<Mmu::InterruptType::TIMER>())
+        return {5};
+    if (HandleInterrupt<Mmu::InterruptType::SERIAL>())
+        return {5};
+    if (HandleInterrupt<Mmu::InterruptType::JOYPAD>())
+        return {5};
+    return {0};
+}
 } // namespace detail

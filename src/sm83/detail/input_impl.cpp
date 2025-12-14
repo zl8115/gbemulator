@@ -16,7 +16,7 @@ InputImpl::InputImpl(Mmu& mmu):
     m_pressedB(false),
     m_pressedSelect(false),
     m_pressedStart(false),
-    m_reg(ImplHelper::ExtractImpl(mmu).GetMappedRegister(REG_BG_PALLETE))
+    m_reg(ImplHelper::ExtractImpl(mmu).GetMappedRegister(REG_P1_JOYPAD))
 {}
 
 void InputImpl::ButtonPressed(GbButton button)

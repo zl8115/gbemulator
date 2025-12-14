@@ -3,14 +3,13 @@
 #include "soc.h"
 #include "detail/impl_helper.h"
 #include "detail/cpu_impl.h"
-#include "detail/mmu_impl.h"
+#include "detail/mmu_reg_names.h"
 #include "detail/cpu_registers.h"
 
 #include <nlohmann/json.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <fstream>
-#include <iostream>
 
 using json = nlohmann::json;
 
@@ -22,14 +21,10 @@ using json = nlohmann::json;
 
 namespace {
 
-void load_state(Registers& cpuReg, Mmu& mmu, const json& initial)
+void load_state(Cpu& cpu, Mmu& mmu, const json& initial)
 {
-    // Some of the tests (e.g. CB 66 01FD) do not respect some of the MMU
-    // Echo RAM / DMA transfer flags, so we need to enable the test mode
-    detail::ImplHelper::ExtractImpl(mmu).EnableTestMode();
+    detail::Registers& cpuReg = detail::ImplHelper::ExtractImpl(cpu).GetRegister();
 
-    mmu.ime = initial.value<std::uint8_t>("ime", 0);
-    mmu.ie = initial.value<std::uint8_t>("ie", 0);
     cpuReg.a = initial.value<std::uint8_t>("a", 0);
     cpuReg.b = initial.value<std::uint8_t>("b", 0);
     cpuReg.c = initial.value<std::uint8_t>("c", 0);
@@ -40,6 +35,8 @@ void load_state(Registers& cpuReg, Mmu& mmu, const json& initial)
     cpuReg.l = initial.value<std::uint8_t>("l", 0);
     cpuReg.pc = initial.value<std::uint16_t>("pc", 0);
     cpuReg.sp = initial.value<std::uint16_t>("sp", 0);
+    cpuReg.ime = initial.value<std::uint8_t>("ime", 0);
+    mmu.Write(REG_INTERRUPT_ENABLE, initial.value<std::uint8_t>("ie", 0));
 
     if (initial.contains("ram"))
     {
@@ -56,11 +53,12 @@ void load_state(Registers& cpuReg, Mmu& mmu, const json& initial)
     return;
 }
 
-bool check_final_state(Registers& cpuReg, Mmu& mmu, json final)
+bool check_final_state(Cpu& cpu, Mmu& mmu, json final)
 {
+    detail::CpuImpl cpuImpl = detail::ImplHelper::ExtractImpl(cpu);
+    detail::Registers& cpuReg = cpuImpl.GetRegister();
+
     bool hasFailures = false;
-    hasFailures |= mmu.ime != final.value<std::uint8_t>("ime", 0);
-    hasFailures |= mmu.ei != final.value<std::uint8_t>("ei", 0);
     hasFailures |= cpuReg.a != final.value<std::uint8_t>("a", 0);
     hasFailures |= cpuReg.b != final.value<std::uint8_t>("b", 0);
     hasFailures |= cpuReg.c != final.value<std::uint8_t>("c", 0);
@@ -71,6 +69,11 @@ bool check_final_state(Registers& cpuReg, Mmu& mmu, json final)
     hasFailures |= cpuReg.l != final.value<std::uint8_t>("l", 0);
     hasFailures |= cpuReg.pc != final.value<std::uint16_t>("pc", 0);
     hasFailures |= cpuReg.sp != final.value<std::uint16_t>("sp", 0);
+    hasFailures |= cpuReg.ime != final.value<std::uint8_t>("ime", 0);
+
+    if (final.contains("ei"))
+        hasFailures |= cpuImpl.GetEi() != final.value<std::uint8_t>("ei", 0);
+
     if (final.contains("ram"))
     {
         int addr = 0;
@@ -96,15 +99,16 @@ bool test_case_will_pass(const json& test_case)
     const auto& cycles = test_case["cycles"];
 
     Soc soc;
+    soc.EnableUnitTestMode();
+
     Mmu& mmu = soc.m_mmu;
     Cpu& cpu = soc.m_cpu;
-    Registers& reg = detail::ImplHelper::ExtractImpl(cpu).GetRegister();
-    load_state(reg, mmu, initial);
+    load_state(cpu, mmu, initial);
 
     auto cyclesTaken = cpu.Step().cycles;
     if (!skipCyclesCheck && cyclesTaken != cycles.size())
         return false;
-    return check_final_state(reg, mmu, final);
+    return check_final_state(cpu, mmu, final);
 }
 
 void run_dynamic_section_test(const json& test_case)
@@ -116,18 +120,21 @@ void run_dynamic_section_test(const json& test_case)
     DYNAMIC_SECTION(name)
     {
         Soc soc;
+        soc.EnableUnitTestMode();
+
         Mmu& mmu = soc.m_mmu;
         Cpu& cpu = soc.m_cpu;
-        Registers& reg =detail::ImplHelper::ExtractImpl(cpu).GetRegister();
-        load_state(reg, mmu, initial);
+
+        load_state(cpu, mmu, initial);
 
         auto cyclesTaken = cpu.Step().cycles;
         INFO("Initial: " + nlohmann::to_string(initial));
         INFO("Final: " + nlohmann::to_string(final));
 
+        detail::CpuImpl& cpuImpl = detail::ImplHelper::ExtractImpl(cpu);
+        detail::Registers& reg = cpuImpl.GetRegister();
+
         // In the checks, we cast to int rather than uint8/16 to make the output comprehensible
-        CHECK(static_cast<int>(mmu.ime) == final.value<int>("ime", 0));
-        CHECK(static_cast<int>(mmu.ei) == final.value<int>("ei", 0));
         CHECK(static_cast<int>(reg.a) == final.value<int>("a", 0));
         CHECK(static_cast<int>(reg.b) == final.value<int>("b", 0));
         CHECK(static_cast<int>(reg.c) == final.value<int>("c", 0));
@@ -138,6 +145,11 @@ void run_dynamic_section_test(const json& test_case)
         CHECK(static_cast<int>(reg.l) == final.value<int>("l", 0));
         CHECK(static_cast<int>(reg.pc) == final.value<int>("pc", 0));
         CHECK(static_cast<int>(reg.sp) == final.value<int>("sp", 0));
+        CHECK(static_cast<int>(reg.ime) == final.value<int>("ime", 0));
+
+        if (final.contains("ei"))
+            CHECK(static_cast<int>(cpuImpl.GetEi()) == final.value<int>("ei", 0));
+
         if (final.contains("ram"))
         {
             int addr = 0;

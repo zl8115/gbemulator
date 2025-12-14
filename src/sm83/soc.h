@@ -18,6 +18,8 @@ public:
     void LoadRomFromFile(std::string_view romPath);
     void RegisterRenderer(IRenderer* pRenderer);
 
+    void EnableUnitTestMode(); // Disables all mapped registry actions (e.g. timer and dma control)
+
     Mmu m_mmu;
     Input m_input;
     Cpu m_cpu;

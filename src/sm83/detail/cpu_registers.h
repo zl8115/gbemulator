@@ -2,10 +2,19 @@
 
 #include <cstdint>
 
+namespace detail {
+
 class Registers
 {
 public:
-    Registers();
+    Registers()
+    : ime(false),
+      a(0), f(0), b(0), c(0),
+      d(0), e(0), h(0), l(0),
+      pc(0), sp(0)
+    {}
+
+    bool ime; // Interrupt Master Enable
 
     uint8_t a;
     uint8_t f;
@@ -18,6 +27,9 @@ public:
 
     uint8_t h;
     uint8_t l;
+
     uint16_t pc;
     uint16_t sp;
 };
+
+} // namespace detail

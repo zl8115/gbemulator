@@ -17,3 +17,18 @@ void Ppu::RegisterRenderer(IRenderer* pRenderer)
 {
     m_pImpl->RegisterRenderer(pRenderer);
 }
+
+void Ppu::SetDisplayOn()
+{
+    m_pImpl->SetDisplayOn();
+}
+
+void Ppu::SetDisplayOff()
+{
+    m_pImpl->SetDisplayOff();
+}
+
+bool Ppu::IsDisplayOn() const
+{
+    return m_pImpl->IsDisplayOn();
+}
