@@ -26,10 +26,11 @@ public:
     void Step(CCycles cycles);
     void RegisterRenderer(IRenderer* pRenderer);
 
+    bool IsDisplayOn() const;
+
     void SetDisplayOn();
     void SetDisplayOff();
 
-    bool IsDisplayOn() const;
-
+private:
     std::unique_ptr<detail::PpuImpl> m_pImpl;
 };

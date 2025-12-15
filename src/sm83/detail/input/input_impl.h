@@ -1,9 +1,9 @@
 #pragma once
 
-#include "input.h"
+#include "input_buttons.h"
+#include "detail/memory/mapped_register.h"
 
-#include "mmu.h"
-#include "mmu_mapped_memory.h"
+class Mmu;
 
 namespace detail {
 

@@ -8,6 +8,10 @@ inline constexpr unsigned int TILES_PER_LINE = 32;
 inline constexpr unsigned int TILE_HEIGHT_PX = 8;
 inline constexpr unsigned int TILE_WIDTH_PX = 8;
 
+inline constexpr unsigned int TILES_PER_BLOCK = 64;
+inline constexpr unsigned int BLOCKS = 6;
+inline constexpr unsigned int BYTES_PER_TILE = 16;
+
 class FrameBuffer;
 
 class IRenderer

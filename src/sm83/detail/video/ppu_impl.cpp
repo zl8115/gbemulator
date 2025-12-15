@@ -1,12 +1,12 @@
-#include "detail/ppu_impl.h"
+#include "detail/video/ppu_impl.h"
 
 #include "bitmanip.h"
-#include "detail/mmu_mapped_memory.h"
-#include "detail/mmu_reg_names.h"
-#include "mmu_impl.h"
+#include "detail/register_names.h"
+#include "detail/video/palette.h"
+#include "detail/memory/mmu_impl.h"
 #include "frame_buffer.h"
 #include "irenderer.h"
-#include "impl_helper.h"
+#include "detail/impl_helper.h"
 
 #include <cstdint>
 #include <stdexcept>
@@ -27,28 +27,28 @@ namespace {
 detail::Palette LoadPalette(detail::MappedRegister& reg)
 {
     uint8_t paletteValue = reg.Read();
-    Colour c0 = static_cast<Colour>((paletteValue & 0b00000011));
-    Colour c1 = static_cast<Colour>((paletteValue & 0b00001100) >> 2);
-    Colour c2 = static_cast<Colour>((paletteValue & 0b00110000) >> 4);
-    Colour c3 = static_cast<Colour>((paletteValue & 0b11000000) >> 6);
+    GbColour c0 = static_cast<GbColour>((paletteValue & 0b00000011));
+    GbColour c1 = static_cast<GbColour>((paletteValue & 0b00001100) >> 2);
+    GbColour c2 = static_cast<GbColour>((paletteValue & 0b00110000) >> 4);
+    GbColour c3 = static_cast<GbColour>((paletteValue & 0b11000000) >> 6);
 
     return {c0, c1, c2, c3};
 }
 
-inline uint16_t GetTileWord(detail::MappedMemoryBlock& lowerBlock, detail::MappedMemoryBlock& upperBlock, uint8_t tileId)
+inline uint16_t GetTileWord(detail::MappedMemoryBlock& lowerBlock, detail::MappedMemoryBlock& upperBlock, uint8_t tileId, uint8_t tileHeight)
 {
-    // Each tile is 2 bytes, so to get the right relative address, we multiply the index by 2
-    uint16_t address = tileId * 16;
+    // Each tile is 16 bytes, 2 bytes per row
+    uint16_t address = ((tileId % 128) * BYTES_PER_TILE) + (tileHeight * 2);
     if (tileId > 127)
     {
-        return ToWord(lowerBlock.Read(address + 1), lowerBlock.Read(address));
+        return ToWord(upperBlock.Read(address + 1), upperBlock.Read(address));
     }
-    return ToWord(upperBlock.Read(address + 1), upperBlock.Read(address));
+    return ToWord(lowerBlock.Read(address + 1), lowerBlock.Read(address));
 }
 
-inline Colour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx, const detail::Palette& palette)
+inline GbColour GetColourFromTile(const uint16_t tileData, const uint8_t pixelIdx, const detail::Palette& palette)
 {
-    unsigned short pixel = CheckBit(Msb(tileData), pixelIdx) >> 1 | CheckBit(Lsb(tileData), pixelIdx);
+    unsigned short pixel = CheckBit(Msb(tileData), pixelIdx) << 1 | CheckBit(Lsb(tileData), pixelIdx);
     return palette[pixel];
 }
 
@@ -67,8 +67,8 @@ PpuImpl::MappedRegisters::MappedRegisters(PpuImpl& ppu, MmuImpl& mmu):
     lcdStatus           (mmu.GetMappedRegister(REG_LCD_STATUS)),
     viewScrollX         (mmu.GetMappedRegister(REG_LCD_VIEW_SCROLL_X)),
     viewScrollY         (mmu.GetMappedRegister(REG_LCD_VIEW_SCROLL_Y)),
-    lcdYCoord           (mmu.GetMappedRegister(REG_LCD_VIEW_POS_X)),
-    lcdLYCompare        (mmu.GetMappedRegister(REG_LCD_VIEW_POS_Y)),
+    lcdYCoord           (mmu.GetMappedRegister(REG_LCD_Y_COORDINATE)),
+    lcdLYCompare        (mmu.GetMappedRegister(REG_LCD_LY_COMPARE)),
     dmaStartAddress     (mmu.GetMappedRegister(REG_DMA_TRANSFER_ADDRESS)),
     bgPalette           (mmu.GetMappedRegister(REG_BG_PALETTE)),
     spritePalette0      (mmu.GetMappedRegister(REG_SPRITE_PALETTE_0)),
@@ -116,8 +116,7 @@ void PpuImpl::Step(CCycles cycles)
                 if (line == 144)
                 {
                     SetPpuMode(Mode::VBLANK);
-                    WriteSprites();
-                    m_mmu.UnsetInterruptFlag<Mmu::InterruptType::VBLANK>();
+                    m_mmu.SetInterruptFlag<Mmu::InterruptType::VBLANK>();
                 }
                 else
                 {
@@ -288,8 +287,9 @@ bool PpuImpl::IsMode0IntSelect() const
     return CheckBit<3>(m_reg.lcdStatus.Read());
 }
 
-bool PpuImpl::IsLYAndLYCEqual() const
+bool PpuImpl::IsLYAndLYCEqual()
 {
+    m_reg.lcdStatus.SetBitTo<2>(m_reg.lcdYCoord.Read() == m_reg.lcdLYCompare.Read());
     return CheckBit<2>(m_reg.lcdStatus.Read());
 }
 
@@ -353,43 +353,43 @@ void PpuImpl::WriteSprites()
 void PpuImpl::DrawBGLine(uint8_t line)
 {
     Palette palette = ::LoadPalette(m_reg.bgPalette);
-    uint screenY = line;
+    unsigned int screenY = line;
 
-    uint scrolledY = screenY + m_reg.viewScrollY.Read();
-    uint bgMapY = scrolledY % BG_MAP_SIZE;
-    uint tileY = bgMapY / TILE_HEIGHT_PX;
-    uint tilePixelY = bgMapY % TILE_HEIGHT_PX;
+    unsigned int scrolledY = screenY + m_reg.viewScrollY.Read();
+    unsigned int bgMapY = scrolledY % BG_MAP_SIZE;
+    unsigned int tileY = bgMapY / TILE_HEIGHT_PX;
+    unsigned int tilePixelY = bgMapY % TILE_HEIGHT_PX;
 
     const bool UseTileMap0 = GetBGAndWindowTileMapAreaType() == TileMapAreaType::ZERO;
     MappedMemoryBlock& tileMap = UseTileMap0
                                     ? m_reg.vram_tileMapBlock0
                                     : m_reg.vram_tileMapBlock1;
 
-    for (uint screenX = 0; screenX < GAMEBOY_WIDTH; screenX++)
+    for (unsigned int screenX = 0; screenX < GAMEBOY_WIDTH; screenX++)
     {
         /* Work out the position of the pixel in the framebuffer */
-        uint scrolledX = screenX + m_reg.viewScrollX.Read();
+        unsigned int scrolledX = screenX + m_reg.viewScrollX.Read();
 
         /* Work out the index of the pixel in the full background map */
-        uint bgMapX = scrolledX % BG_MAP_SIZE;
+        unsigned int bgMapX = scrolledX % BG_MAP_SIZE;
 
         /* Work out which tile of the bg_map this pixel is in, and the index of that tile
          * in the array of all tiles */
-        uint tileX = bgMapX / TILE_WIDTH_PX;
+        unsigned int tileX = bgMapX / TILE_WIDTH_PX;
 
         /* Work out which specific (x,y) inside that tile we're going to render */
-        uint tilePixelX = bgMapX % TILE_WIDTH_PX;
+        unsigned int tilePixelX = bgMapX % TILE_WIDTH_PX;
 
         /* Work out the address of the tile ID from the tile map */
-        uint tileIdx = tileY * TILES_PER_LINE + tileX;
+        unsigned int tileIdx = tileY * TILES_PER_LINE + tileX;
 
         /* Grab the ID of the tile we'll get data from in the tile map */
         uint8_t tileId = tileMap.Read(tileIdx);
 
         /* Calculate the offset from the start of the tile data memory where
          * the data for our tile lives */
-        uint16_t tile = GetBGOrWindowTile(tileId);
-        Colour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
+        uint16_t tile = GetBGOrWindowTile(tileId, tilePixelY);
+        GbColour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
 
         m_viewBuffer.SetPixel(screenX, screenY, pixelColour);
     }
@@ -397,15 +397,13 @@ void PpuImpl::DrawBGLine(uint8_t line)
 
 void PpuImpl::DrawWindowLine(uint8_t line)
 {
-    uint screenY = line;
-    uint windowY = screenY - m_reg.windowPosY.Read();
+    unsigned int screenY = line;
+    unsigned int windowY = screenY - m_reg.windowPosY.Read();
     if (windowY >= GAMEBOY_HEIGHT)
-    {
         return;
-    }
 
-    uint tileY = windowY / TILE_HEIGHT_PX;
-    uint tilePixelY = windowY % TILE_HEIGHT_PX;
+    unsigned int tileY = windowY / TILE_HEIGHT_PX;
+    unsigned int tilePixelY = windowY % TILE_HEIGHT_PX;
 
     Palette palette = ::LoadPalette(m_reg.bgPalette);
     const bool UseTileMap0 = GetBGAndWindowTileMapAreaType() == TileMapAreaType::ZERO;
@@ -413,28 +411,28 @@ void PpuImpl::DrawWindowLine(uint8_t line)
                                     ? m_reg.vram_tileMapBlock0
                                     : m_reg.vram_tileMapBlock1;
 
-    for (uint screenX = 0; screenX < GAMEBOY_WIDTH; screenX++)
+    for (unsigned int screenX = 0; screenX < GAMEBOY_WIDTH; screenX++)
     {
         /* Work out the position of the pixel in the framebuffer */
-        uint scrolledX = screenX + m_reg.windowPosX.Read() - 7;
+        unsigned int scrolledX = screenX + m_reg.windowPosX.Read() - 7;
         if (scrolledX >= GAMEBOY_WIDTH)
             return;
 
         /* Work out which tile of the bg_map this pixel is in, and the index of that tile
          * in the array of all tiles */
-        uint tileX = scrolledX / TILE_WIDTH_PX;
-        uint tilePixelX = scrolledX % TILE_WIDTH_PX;
+        unsigned int tileX = scrolledX / TILE_WIDTH_PX;
+        unsigned int tilePixelX = scrolledX % TILE_WIDTH_PX;
 
         /* Work out the address of the tile ID from the tile map */
-        uint tileIdx = (tileY * TILES_PER_LINE) + tileX;
+        unsigned int tileIdx = (tileY * TILES_PER_LINE) + tileX;
 
         /* Grab the ID of the tile we'll get data from in the tile map */
         uint8_t tileId = tileMap.Read(tileIdx);
 
         /* Calculate the offset from the start of the tile data memory where
          * the data for our tile lives */
-        uint16_t tile = GetBGOrWindowTile(tileId);
-        Colour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
+        uint16_t tile = GetBGOrWindowTile(tileId, tilePixelY);
+        GbColour pixelColour = GetColourFromTile(tile, tilePixelX, palette);
 
         m_viewBuffer.SetPixel(screenX, screenY, pixelColour);
     }
@@ -480,10 +478,10 @@ void PpuImpl::DrawSprite(uint8_t spriteId)
     for (uint16_t tileOffset = 0; tileOffset < maxTileOffset; ++tileOffset)
     {
         startY += tileOffset * TILE_HEIGHT_PX;
-        uint16_t tileData = GetObjTile(tileIdx + tileOffset);
 
         for (uint16_t y = 0; y < TILE_HEIGHT_PX; y++)
         {
+            uint16_t tileData = GetObjTile(tileIdx + tileOffset, y);
             for (uint16_t x = 0; x < TILE_WIDTH_PX; x++)
             {
                 uint16_t maybe_flipped_y = !flipY
@@ -500,14 +498,13 @@ void PpuImpl::DrawSprite(uint8_t spriteId)
                 int screenY = startY + y;
                 if (screenY < 0 || screenY >= GAMEBOY_HEIGHT) { continue; }
 
-                uint8_t pixelIdx = (y * TILE_HEIGHT_PX) + x;
-                Colour colour = GetColourFromTile(tileData, pixelIdx, palette);
+                GbColour colour = GetColourFromTile(tileData, x, palette);
 
                 // Color 0 is transparent
-                if (colour == Colour::White) { continue; }
+                if (colour == GbColour::White) { continue; }
 
                 auto existingPixel = m_viewBuffer.GetPixel(x, y);
-                if (priorityFlag && existingPixel != Colour::White) { continue; }
+                if (priorityFlag && existingPixel != GbColour::White) { continue; }
 
                 m_viewBuffer.SetPixel(screenX, screenY, colour);
             }
@@ -516,15 +513,15 @@ void PpuImpl::DrawSprite(uint8_t spriteId)
 }
 
 // TODO: Deduplicate
-uint16_t PpuImpl::GetObjTile(uint8_t tileId)
+uint16_t PpuImpl::GetObjTile(uint8_t tileId, uint8_t tileHeight)
 {
     auto& lowerBlock = m_reg.vram_tileDataBlock0;
     auto& upperBlock = m_reg.vram_tileDataBlock1;
 
-    return ::GetTileWord(lowerBlock, upperBlock, tileId);
+    return ::GetTileWord(lowerBlock, upperBlock, tileId, tileHeight);
 }
 
-uint16_t PpuImpl::GetBGOrWindowTile(uint8_t tileId)
+uint16_t PpuImpl::GetBGOrWindowTile(uint8_t tileId, uint8_t tileHeight)
 {
     auto type = GetBGAndWindowTileMapAreaType();
     auto& lowerBlock = (type == TileMapAreaType::ZERO)
@@ -532,7 +529,7 @@ uint16_t PpuImpl::GetBGOrWindowTile(uint8_t tileId)
                 : m_reg.vram_tileDataBlock2;
     auto& upperBlock = m_reg.vram_tileDataBlock1;
 
-    return ::GetTileWord(lowerBlock, upperBlock, tileId);
+    return ::GetTileWord(lowerBlock, upperBlock, tileId, tileHeight);
 }
 
 } // namespace detail

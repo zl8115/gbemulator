@@ -1,10 +1,9 @@
-#include "detail/catridge_impl.h"
+#include "detail/catridge/catridge_impl.h"
 
-#include "detail/catridge_bootrom.h"
 #include "detail/impl_helper.h"
-#include "detail/mmu_impl.h"
-#include "detail/mmu_mapped_memory.h"
-#include "detail/mmu_reg_names.h"
+#include "detail/catridge/bootrom.h"
+#include "detail/memory/mmu_impl.h"
+#include "detail/register_names.h"
 #include "mmu.h"
 
 #include <utility>
@@ -12,6 +11,8 @@
 
 constexpr bool UseFixedMemory = true;
 constexpr bool DoNotUseFixedMemory = false;
+
+class Mmu;
 
 namespace detail {
 

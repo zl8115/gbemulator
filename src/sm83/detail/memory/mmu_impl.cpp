@@ -1,9 +1,9 @@
-#include "detail/mmu_impl.h"
+#include "detail/memory/mmu_impl.h"
 
-#include "detail/catridge_impl.h"
-#include "detail/mmu_mapped_memory.h"
-#include "detail/mmu_reg_names.h"
-#include "detail/ppu_impl.h"
+#include "detail/catridge/catridge_impl.h"
+#include "detail/memory/mapped_memory_block.h"
+#include "detail/register_names.h"
+#include "detail/video/ppu_impl.h"
 
 #include <memory.h>
 #include <stdexcept>

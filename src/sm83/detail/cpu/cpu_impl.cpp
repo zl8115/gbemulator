@@ -1,8 +1,8 @@
-#include "detail/cpu_impl.h"
+#include "detail/cpu/cpu_impl.h"
 
 #include "bitmanip.h"
-#include "detail/cpu_cycles.h"
-#include "detail/mmu_reg_names.h"
+#include "detail/cpu/opcode_cycles.h"
+#include "detail/register_names.h"
 
 #include <functional>
 #include <stdexcept>

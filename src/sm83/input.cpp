@@ -1,6 +1,6 @@
 #include "input.h"
 #include "mmu.h"
-#include "detail/input_impl.h"
+#include "detail/input/input_impl.h"
 
 Input::Input(Mmu& mmu):
     m_pImpl(std::make_unique<detail::InputImpl>(mmu))

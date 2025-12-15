@@ -2,7 +2,7 @@
 
 #include "cycles.h"
 #include "mmu.h"
-#include "detail/mmu_mapped_memory.h"
+#include "detail/memory/mapped_register.h"
 
 namespace detail {
 

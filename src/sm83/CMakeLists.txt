@@ -18,13 +18,13 @@ add_library(Sm83 STATIC
     ppu.cpp
     soc.cpp
 
-    detail/catridge_impl.cpp
-    detail/cpu_cycles.cpp
-    detail/cpu_impl.cpp
-    detail/input_impl.cpp
-    detail/mmu_impl.cpp
-    detail/ppu_impl.cpp
-    detail/timer.cpp
+    detail/catridge/catridge_impl.cpp
+    detail/cpu/cpu_impl.cpp
+    detail/cpu/opcode_cycles.cpp
+    detail/cpu/timer.cpp
+    detail/input/input_impl.cpp
+    detail/memory/mmu_impl.cpp
+    detail/video/ppu_impl.cpp
 )
 target_include_directories(
     Sm83

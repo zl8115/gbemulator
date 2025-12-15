@@ -1,6 +1,7 @@
 #pragma once
 
-#include "mmu_mapped_memory.h"
+#include "detail/memory/mapped_memory_block.h"
+#include "detail/memory/mapped_register.h"
 
 #include <functional>
 

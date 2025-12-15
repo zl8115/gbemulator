@@ -1,4 +1,4 @@
-#include "cpu_cycles.h"
+#include "detail/cpu/opcode_cycles.h"
 
 MCycles s_OpCodeCycles[0x100] = {
     1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1,

@@ -1,30 +1,25 @@
 #pragma once
 
-#include <vector>
+#include "gb_colour.h"
 
-enum class Colour {
-    White,
-    LightGrey,
-    DarkGrey,
-    Black,
-};
+#include <vector>
 
 class FrameBuffer {
 public:
     FrameBuffer(unsigned int width, unsigned int height);
 
-    void SetPixel(unsigned int x, unsigned int y, Colour color);
-    Colour GetPixel(unsigned int x, unsigned int y) const;
+    void SetPixel(unsigned int x, unsigned int y, GbColour colour);
+    GbColour GetPixel(unsigned int x, unsigned int y) const;
 
     void Reset();
-    unsigned int GetWidth() const;
-    unsigned int GetHeight() const;
-    const std::vector<Colour>& GetBuffer() const;
+    unsigned int GetWidth() const { return m_width; }
+    unsigned int GetHeight() const { return m_height; }
+    const std::vector<GbColour>& GetBuffer() const;
 
 private:
     std::size_t GetPixelIndex(unsigned int x, unsigned int y) const;
 
     unsigned int m_width;
     unsigned int m_height;
-    std::vector<Colour> m_buffer;
+    std::vector<GbColour> m_buffer;
 };

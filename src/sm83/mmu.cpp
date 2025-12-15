@@ -1,6 +1,6 @@
 #include "mmu.h"
 
-#include "detail/mmu_impl.h"
+#include "detail/memory/mmu_impl.h"
 
 Mmu::Mmu()
     : m_pImpl(std::make_unique<detail::MmuImpl>())

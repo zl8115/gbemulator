@@ -3,8 +3,8 @@
 
 #include "soc.h"
 #include "detail/impl_helper.h"
-#include "detail/cpu_impl.h"
-#include "detail/cpu_registers.h"
+#include "detail/cpu/cpu_impl.h"
+#include "detail/cpu/registers.h"
 
 using Registers = detail::Registers;
 

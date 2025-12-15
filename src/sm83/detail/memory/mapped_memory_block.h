@@ -2,30 +2,16 @@
 
 #include <cstdint>
 
-#include <stdexcept>
-#include <span>
 #include <array>
 #include <memory>
+#include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace detail {
 
 template<std::size_t N>
 using MemoryBlock = std::array<uint8_t, N>;
-
-class MappedRegister
-{
-public:
-    MappedRegister(uint8_t& reg):
-        m_reg(reg)
-    {}
-
-    uint8_t Read() const { return m_reg; }
-    virtual void Write(uint8_t byte) { m_reg = byte; };
-
-private:
-    uint8_t& m_reg;
-};
 
 class MappedMemoryBlock
 {

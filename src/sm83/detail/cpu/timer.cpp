@@ -1,8 +1,8 @@
-#include "detail/timer.h"
+#include "detail/cpu/timer.h"
 
 #include "detail/impl_helper.h"
-#include "detail/mmu_impl.h"
-#include "detail/mmu_reg_names.h"
+#include "detail/memory/mmu_impl.h"
+#include "detail/register_names.h"
 #include "mmu.h"
 
 namespace detail {

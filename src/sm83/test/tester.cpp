@@ -2,9 +2,9 @@
 
 #include "soc.h"
 #include "detail/impl_helper.h"
-#include "detail/cpu_impl.h"
-#include "detail/mmu_reg_names.h"
-#include "detail/cpu_registers.h"
+#include "detail/register_names.h"
+#include "detail/cpu/cpu_impl.h"
+#include "detail/cpu/registers.h"
 
 #include <nlohmann/json.hpp>
 #include <catch2/catch_test_macros.hpp>

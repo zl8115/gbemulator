@@ -1,7 +1,8 @@
 #pragma once
 
-#include "mmu_mapped_memory.h"
-#include "catridge_mbc.h"
+#include "detail/memory/mapped_memory_block.h"
+#include "detail/memory/mapped_register.h"
+#include "detail/catridge/mbc.h"
 
 #include <cstdint>
 #include <vector>

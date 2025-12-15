@@ -1,5 +1,5 @@
 #include "catridge.h"
-#include "detail/catridge_impl.h"
+#include "detail/catridge/catridge_impl.h"
 
 #include <utility>
 

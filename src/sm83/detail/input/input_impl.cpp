@@ -1,9 +1,10 @@
-#include "detail/input_impl.h"
+#include "detail/input/input_impl.h"
 
 #include "bitmanip.h"
+#include "mmu.h"
 #include "detail/impl_helper.h"
-#include "detail/mmu_impl.h"
-#include "detail/mmu_reg_names.h"
+#include "detail/memory/mmu_impl.h"
+#include "detail/register_names.h"
 
 namespace detail {
 

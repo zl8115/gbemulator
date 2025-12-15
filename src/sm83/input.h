@@ -1,5 +1,7 @@
 #pragma once
 
+#include "input_buttons.h"
+
 #include <memory>
 
 namespace detail {
@@ -7,18 +9,6 @@ class InputImpl;
 } // namespace detail
 
 class Mmu;
-
-enum class GbButton: uint8_t
-{
-    Up,
-    Down,
-    Left,
-    Right,
-    A,
-    B,
-    Select,
-    Start,
-};
 
 class Input {
 public:

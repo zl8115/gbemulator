@@ -2,8 +2,8 @@
 
 #include "cycles.h"
 #include "mmu.h"
-#include "detail/timer.h"
-#include "detail/cpu_registers.h"
+#include "detail/cpu/timer.h"
+#include "detail/cpu/registers.h"
 #include <cstdint>
 
 namespace detail {

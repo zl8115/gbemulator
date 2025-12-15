@@ -3,9 +3,9 @@
 #include "mmu.h"
 #include "ppu.h"
 
-#include "detail/cpu_impl.h"
 #include "detail/impl_helper.h"
-#include "detail/mmu_impl.h"
+#include "detail/cpu/cpu_impl.h"
+#include "detail/memory/mmu_impl.h"
 
 #include <filesystem>
 #include <format>

@@ -1,5 +1,5 @@
 #include "ppu.h"
-#include "detail/ppu_impl.h"
+#include "detail/video/ppu_impl.h"
 
 Ppu::Ppu(Mmu& mmu):
     m_pImpl(std::make_unique<detail::PpuImpl>(mmu))

@@ -1,35 +1,18 @@
 #pragma once
 
 #include "cycles.h"
-#include "mmu.h"
-#include "mmu_mapped_memory.h"
+#include "detail/memory/mapped_memory_block.h"
+#include "detail/memory/mapped_register.h"
 #include "frame_buffer.h"
 #include "irenderer.h"
 
 #include <cstdint>
-#include <array>
+
+class Mmu;
 
 namespace detail {
 
-class Palette
-{
-public:
-    Palette():
-        m_colours({Colour::White, Colour::LightGrey, Colour::DarkGrey, Colour::Black})
-    {}
-
-    Palette(Colour c0, Colour c1, Colour c2, Colour c3):
-        m_colours({c0, c1, c2, c3})
-    {}
-
-    const Colour& operator[] (unsigned short index) const
-    {
-        return m_colours[index];
-    }
-
-private:
-    std::array<Colour, 4> m_colours;
-};
+class MmuImpl;
 
 class PpuImpl
 {
@@ -59,7 +42,9 @@ public:
 
     void Step(CCycles cycles);
     void Render() const;
+
     void RegisterRenderer(IRenderer* pRenderer);
+
     void SetDisplayOn();
     void SetDisplayOff();
     const FrameBuffer& GetViewBuffer() const;
@@ -79,7 +64,7 @@ public:
     bool            IsMode2IntSelect()              const; // bit 5
     bool            IsMode1IntSelect()              const; // bit 4
     bool            IsMode0IntSelect()              const; // bit 3
-    bool            IsLYAndLYCEqual()               const; // bit 2
+    bool            IsLYAndLYCEqual()                    ; // bit 2
     Mode            GetPpuMode()                    const; // bit 1 & 0
 
     void            SetPpuMode(Mode mode);                 // bit 1 & 0
@@ -118,8 +103,8 @@ private:
     void DrawBGLine(uint8_t line);
     void DrawWindowLine(uint8_t line);
     void DrawSprite(uint8_t spriteId);
-    uint16_t GetObjTile(uint8_t tileId);
-    uint16_t GetBGOrWindowTile(uint8_t tileId);
+    uint16_t GetObjTile(uint8_t tileId, uint8_t pixelHeight);
+    uint16_t GetBGOrWindowTile(uint8_t tileId, uint8_t pixelHeight);
 
     IRenderer* m_pRenderer;
     Mmu& m_mmu;
