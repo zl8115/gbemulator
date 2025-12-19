@@ -52,20 +52,21 @@ public:
 
     bool IsLoaded() const;
 
-    WeakMappedMemoryBlock GetMemoryFixedRomBank() const;
-    WeakMappedMemoryBlock GetMemorySwitchableRomBank() const;
-    WeakMappedMemoryBlock GetMemoryExternalRam() const;
+    WeakMappedMemoryBlock GetMemoryFixedRomBank() const { return WeakMappedMemoryBlock(m_pFixedRomBank); }
+    WeakMappedMemoryBlock GetMemorySwitchableRomBank() const { return WeakMappedMemoryBlock(m_pSwitchableRomBank); }
+    WeakMappedMemoryBlock GetMemoryExternalRam() const { return WeakMappedMemoryBlock<(m_pExternalRam); }
 
 private:
     void ValidateRom();
     void LoadBootRom();
-    void SwitchRomBanks();
 
+    void SwitchRomBanks();
     void SwitchRamBanks();
     void SwitchFixedRom(bool useFixed, uint16_t offset);
 
-    void SwitchSwitchableRom(bool useFixed, uint16_t offset);
-    void SwitchExternalRam(bool useFixed, uint16_t offset);
+    void SwitchFixedRom(bool useFixed, std::size_t offset);
+    void SwitchSwitchableRom(bool useFixed, std::size_t offset);
+    void SwitchExternalRam(bool useFixed, std::size_t offset);
 
     bool HandleBootRomRegWrite(uint8_t value);
     bool HandleFixedRomWrite(uint16_t address, uint8_t value);
@@ -90,7 +91,7 @@ private:
 
     MemoryBlock<0x4000> m_fixedRomBank;
     MemoryBlock<0x4000> m_switchableRomBank;
-    MemoryBlock<0x8000> m_externalRam;
+    MemoryBlock<0x2000> m_externalRam;
 
     std::vector<uint8_t> m_rom;
 };

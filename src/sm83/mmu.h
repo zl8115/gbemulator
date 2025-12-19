@@ -39,7 +39,7 @@ public:
     void EnableInterrupt()
     {
         uint8_t value = Read(0xFFFF);
-        SetBitTo<static_cast<std::size_t>(Type), true>(value);
+        SetBitToTrue<static_cast<std::size_t>(Type)>(value);
         Write(0xFFFF, value);
     }
 
@@ -47,7 +47,7 @@ public:
     void DisableInterrupt()
     {
         uint8_t value = Read(0xFFFF);
-        SetBitTo<static_cast<std::size_t>(Type), false>(value);
+        SetBitToFalse<static_cast<std::size_t>(Type)>(value);
         Write(0xFFFF, value);
     }
 
@@ -55,16 +55,16 @@ public:
     void SetInterruptFlag()
     {
         uint8_t value = Read(0xFF0F);
-        SetBitTo<static_cast<std::size_t>(Type), true>(value);
-        Write(0xFFFF, value);
+        SetBitToTrue<static_cast<std::size_t>(Type)>(value);
+        Write(0xFF0F, value);
     }
 
     template <Mmu::InterruptType Type>
     void UnsetInterruptFlag()
     {
         uint8_t value = Read(0xFF0F);
-        SetBitTo<static_cast<std::size_t>(Type), false>(value);
-        Write(0xFFFF, value);
+        SetBitToFalse<static_cast<std::size_t>(Type)>(value);
+        Write(0xFF0F, value);
     }
 
     template <InterruptType Type>

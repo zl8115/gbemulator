@@ -8,6 +8,8 @@
 #include <memory.h>
 #include <stdexcept>
 
+constexpr uint16_t REG_INTERRUPT_ENABLE_RELATIVE_ADDRESS = REG_INTERRUPT_ENABLE - REGION_HIGH_RAM_START;
+
 namespace detail {
 
 MmuImpl::MmuImpl():
@@ -94,7 +96,7 @@ uint8_t MmuImpl::Read(const uint16_t address) const
 
     if (address == REG_INTERRUPT_ENABLE)
     {
-        return m_interruptEnable;
+        return m_highRam.at(REG_INTERRUPT_ENABLE_RELATIVE_ADDRESS);
     }
 
     throw std::out_of_range("Accessing address out of range");
@@ -156,7 +158,7 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
     {
         // TODO: Log err
         relativeAddress = address - REGION_UNUSABLE_START;
-        m_objectAttributeMemory.Write(relativeAddress, byte);
+        m_notUsable.at(relativeAddress) = byte;
         return;
     }
 
@@ -164,6 +166,11 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
     {
         relativeAddress = address - REGION_IO_REGISTERS_START;
         m_input.at(relativeAddress) = byte;
+        if (address == REG_DMA_TRANSFER_ADDRESS)
+        {
+            DmaTransfer(byte);
+        }
+
         return;
     }
 
@@ -171,17 +178,12 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
     {
         relativeAddress = address - REGION_HIGH_RAM_START;
         m_highRam.at(relativeAddress) = byte;
-
-        if (address == REG_DMA_TRANSFER_ADDRESS)
-        {
-            DmaTransfer(byte);
-        }
         return;
     }
 
     if (address == REG_INTERRUPT_ENABLE)
     {
-        m_interruptEnable = byte;
+        m_highRam.at(REG_INTERRUPT_ENABLE_RELATIVE_ADDRESS) = byte;
         return;
     }
 

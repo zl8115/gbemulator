@@ -1,5 +1,6 @@
 #include "detail/catridge/catridge_impl.h"
 
+#include "detail/catridge/mbc.h"
 #include "detail/impl_helper.h"
 #include "detail/catridge/bootrom.h"
 #include "detail/memory/mmu_impl.h"
@@ -76,21 +77,6 @@ bool CatridgeImpl::IsLoaded() const
     return !m_rom.empty();
 }
 
-WeakMappedMemoryBlock CatridgeImpl::GetMemoryFixedRomBank() const
-{
-    return WeakMappedMemoryBlock(m_pFixedRomBank);
-}
-
-WeakMappedMemoryBlock CatridgeImpl::GetMemorySwitchableRomBank() const
-{
-    return WeakMappedMemoryBlock(m_pSwitchableRomBank);
-}
-
-WeakMappedMemoryBlock CatridgeImpl::GetMemoryExternalRam() const
-{
-    return WeakMappedMemoryBlock(m_pExternalRam);
-}
-
 /*     ************** Private Methods *************     */
 void CatridgeImpl::ValidateRom()
 {
@@ -109,7 +95,9 @@ bool CatridgeImpl::HandleBootRomRegWrite(uint8_t value)
 
 void CatridgeImpl::SwitchRomBanks()
 {
-    if (!IsLoaded() || m_mapperChip == MapperChip::ROM_ONLY)
+    // We still want to switch out from the FixedMemory to DynamicMemory
+    // to unload the bootrom, so we do not check if it is MapperChip::ROM_ONLY
+    if (!IsLoaded())
     {
         return;
     }
@@ -117,14 +105,15 @@ void CatridgeImpl::SwitchRomBanks()
     std::size_t adjustedBankSelection = ((m_switchableBankSelect & 0x1F) == 0)
         ? 0x1
         : m_switchableBankSelect & 0x1F;
-    if (!m_bankingMode)
+    if (m_bankingMode)
     {
         adjustedBankSelection |= m_ramBankSelect & 0x3 << 6;
     }
     // TODO: Bit mask with maximum number of banks
 
     std::size_t offset = adjustedBankSelection * 0x4000;
-    SwitchExternalRam(DoNotUseFixedMemory, offset);
+    SwitchFixedRom(DoNotUseFixedMemory, 0);
+    SwitchSwitchableRom(DoNotUseFixedMemory, offset);
 }
 
 void CatridgeImpl::SwitchRamBanks()
@@ -133,18 +122,9 @@ void CatridgeImpl::SwitchRamBanks()
     {
         return;
     }
-
-    if (!m_bankingMode)
-    {
-        SwitchRomBanks();
-        return;
-    }
-
     std::size_t adjustedBankSelection = (m_ramBankSelect & 0x3);
     std::size_t offset = adjustedBankSelection * 0x4000;
-
-    SwitchFixedRom(DoNotUseFixedMemory, offset);
-    SwitchSwitchableRom(DoNotUseFixedMemory, offset);
+    SwitchExternalRam(DoNotUseFixedMemory, offset);
 }
 
 namespace {
@@ -155,7 +135,7 @@ void SwitchMemoryBlock(
     MemoryBlock<N>& fixedMemoryBlock,
     std::vector<uint8_t>& dynamicMemoryBlock,
     bool useFixed,
-    uint16_t offset)
+    std::size_t offset)
 
 {
     if (useFixed)
@@ -166,14 +146,14 @@ void SwitchMemoryBlock(
     mappedMemoryBlock = MappedMemoryBlock(dynamicMemoryBlock, offset, N);
 }
 
-}
+} // namespace
 
-void CatridgeImpl::SwitchFixedRom(bool useFixed, uint16_t offset)
+void CatridgeImpl::SwitchFixedRom(bool useFixed, std::size_t offset)
 {
     SwitchMemoryBlock(*m_pFixedRomBank, m_fixedRomBank, m_rom, useFixed, offset);
 }
 
-void CatridgeImpl::SwitchSwitchableRom(bool useFixed, uint16_t offset)
+void CatridgeImpl::SwitchSwitchableRom(bool useFixed, std::size_t offset)
 {
     SwitchMemoryBlock(*m_pSwitchableRomBank, m_switchableRomBank, m_rom, useFixed, offset);
 }
@@ -188,10 +168,15 @@ bool CatridgeImpl::HandleFixedRomWrite(uint16_t address, uint8_t value)
     if (!IsLoaded())
         return true;
 
+    if (address > 0x4000)
+        return false;
+
+    // Absolute addr range: 0x0000 - 0x1FFF
     if (address <= 0x1FFF)
     {
         m_ramEnable = (value & 0xA) == 0xA;
     }
+    // Absolute addr range: 0x2000 - 0x3FFF
     else if (address <= 0x3FFF)
     {
         m_switchableBankSelect = 0;
@@ -206,20 +191,24 @@ bool CatridgeImpl::HandleSwitchableRomWrite(uint16_t address, uint8_t value)
     if (!IsLoaded())
         return true;
 
+    if (address > 0x4000)
+        return false;
+
     // Absolute addr range: 0x4000 - 0x5FFF
     if (address <= 0x1FFF)
     {
         m_ramBankSelect = 0;
         m_ramBankSelect |= (value & 0b11);
-        SwitchRamBanks();
     }
-    // Absolute addr range: 0x4000 - 0x5FFF
+
+    // Absolute addr range: 0x6000 - 0x7FFF
     else if (address <= 0x3FFF)
     {
-        m_ramBankSelect = 0;
+        // Switching banking mode enables "Advanced" bank switching for both ROM and RAM
         m_bankingMode = (value & 0x1);
-        SwitchRamBanks();
+        SwitchRomBanks();
     }
+    SwitchRamBanks();
     return false;
 }
 

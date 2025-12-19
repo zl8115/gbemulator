@@ -104,7 +104,8 @@ SdlRenderer::SdlRenderer():
         m_pRenderer.get(),
         SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING,
-        RENDER_WIDTH, RENDER_HEIGHT
+        RENDER_WIDTH,
+        RENDER_HEIGHT
     ));
     if (!m_pTexture)
     {
@@ -122,6 +123,12 @@ SdlRenderer::~SdlRenderer()
 
 void SdlRenderer::Render(const FrameBuffer& buffer) 
 {
+    ProcessEvents();
+    if (m_pGbInput)
+    {
+        m_pGbInput->Step();
+    }
+
     SDL_RenderClear(m_pRenderer.get());
 
     void* pPixels;
@@ -138,7 +145,6 @@ void SdlRenderer::Render(const FrameBuffer& buffer)
 
 void SdlRenderer::Step()
 {
-    ProcessEvents();
 }
 
 std::optional<GbButton> GetGbButton(int keyCode)

@@ -1053,7 +1053,8 @@ MCycles CpuImpl::Step()
     else if (m_state.halted)
         return {1};
 
-    auto opcode = m_state.mmu.Read(m_reg.pc);
+    auto pc = m_reg.pc;
+    auto opcode = m_state.mmu.Read(pc);
     if (m_state.haltBug)
     {
         m_state.haltBug = false;
