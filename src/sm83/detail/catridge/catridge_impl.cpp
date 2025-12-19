@@ -1,8 +1,8 @@
 #include "detail/catridge/catridge_impl.h"
 
-#include "detail/catridge/mbc.h"
 #include "detail/impl_helper.h"
 #include "detail/catridge/bootrom.h"
+#include "detail/catridge/mbc.h"
 #include "detail/memory/mmu_impl.h"
 #include "detail/register_names.h"
 #include "mmu.h"
@@ -29,25 +29,29 @@ CatridgeImpl::CatridgeImpl(Mmu& mmu):
     m_pFixedRomBank(),
     m_pSwitchableRomBank(),
     m_pExternalRam(),
-    m_bootRomReg(ImplHelper::ExtractImpl(mmu).GetMappedRegister(REG_BOOT_ROM_MAPPING_CONTROL), std::bind(&CatridgeImpl::HandleBootRomRegWrite, this, std::placeholders::_1)),
+    m_bootRomReg(),
     m_fixedRomBank(),
     m_switchableRomBank(),
     m_externalRam(),
     m_rom()
 {
     using namespace std::placeholders;
-    using MBC = CatridgeMemoryBlockController;
+
+    auto& mmuImpl = ImplHelper::ExtractImpl(mmu);
+
+    auto bootRomRegHandlerFunc = std::bind(&CatridgeImpl::HandleBootRomRegWrite, this, _1);
+    m_bootRomReg = std::make_unique<CatridgeBootRomRegister>(mmuImpl.GetMappedRegister(REG_BOOT_ROM_MAPPING_CONTROL), bootRomRegHandlerFunc);
 
     auto fixedRomHandlerFunc = std::bind(&CatridgeImpl::HandleFixedRomWrite, this, _1, _2);
-    m_pFixedRomBank = std::make_unique<MBC>(m_fixedRomBank, 0, m_fixedRomBank.size(), fixedRomHandlerFunc);
+    m_pFixedRomBank = std::make_unique<CatridgeMemoryBlockController<0x4000>>(m_fixedRomBank, 0, fixedRomHandlerFunc);
 
     auto switcherRomHandlerFunc = std::bind(&CatridgeImpl::HandleSwitchableRomWrite, this, _1, _2);
-    m_pSwitchableRomBank = std::make_unique<MBC>(m_switchableRomBank, 0, m_switchableRomBank.size(), switcherRomHandlerFunc);
+    m_pSwitchableRomBank = std::make_unique<CatridgeMemoryBlockController<0x4000>>(m_switchableRomBank, 0, switcherRomHandlerFunc);
 
     auto externalRamHandlerFunc = std::bind(&CatridgeImpl::HandleExternalRamWrite, this, _1, _2);
-    m_pExternalRam = std::make_unique<MBC>(m_externalRam, 0, m_externalRam.size(), externalRamHandlerFunc);
+    m_pExternalRam = std::make_unique<CatridgeMemoryBlockController<0x2000>>(m_externalRam, 0, externalRamHandlerFunc);
 
-    ImplHelper::ExtractImpl(mmu).MapMemory(*this);
+    mmuImpl.MapMemory(*this);
 }
 
 void CatridgeImpl::LoadRom(std::vector<uint8_t>&& romData)
@@ -131,7 +135,7 @@ namespace {
 
 template <std::size_t N>
 void SwitchMemoryBlock(
-    MappedMemoryBlock& mappedMemoryBlock,
+    MappedMemoryBlock<N>& mappedMemoryBlock,
     MemoryBlock<N>& fixedMemoryBlock,
     std::vector<uint8_t>& dynamicMemoryBlock,
     bool useFixed,
@@ -140,10 +144,10 @@ void SwitchMemoryBlock(
 {
     if (useFixed)
     {
-        mappedMemoryBlock = MappedMemoryBlock(fixedMemoryBlock, 0, N);
+        mappedMemoryBlock = MappedMemoryBlock<N>(fixedMemoryBlock, 0);
         return;
     }
-    mappedMemoryBlock = MappedMemoryBlock(dynamicMemoryBlock, offset, N);
+    mappedMemoryBlock = MappedMemoryBlock<N>(dynamicMemoryBlock, offset);
 }
 
 } // namespace
@@ -158,7 +162,7 @@ void CatridgeImpl::SwitchSwitchableRom(bool useFixed, std::size_t offset)
     SwitchMemoryBlock(*m_pSwitchableRomBank, m_switchableRomBank, m_rom, useFixed, offset);
 }
 
-void CatridgeImpl::SwitchExternalRam(bool useFixed, uint16_t offset)
+void CatridgeImpl::SwitchExternalRam(bool useFixed, std::size_t offset)
 {
     SwitchMemoryBlock(*m_pExternalRam, m_externalRam, m_rom, useFixed, offset);
 }

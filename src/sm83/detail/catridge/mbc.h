@@ -7,28 +7,26 @@
 
 namespace detail {
 
+template<uint16_t N>
 class CatridgeMemoryBlockController:
-    public MappedMemoryBlock
+    public MappedMemoryBlock<N>
 {
 public:
-    template<std::size_t N>
     CatridgeMemoryBlockController(
         MemoryBlock<N>& memoryBlock,
         uint16_t offset,
-        uint16_t count,
         std::function<bool(uint16_t, uint8_t)> notifyFunc)
     :
-        MappedMemoryBlock(memoryBlock, offset, count),
+        MappedMemoryBlock<N>(memoryBlock, offset),
         m_handleFunc(notifyFunc)
     {}
 
     CatridgeMemoryBlockController(
         std::vector<uint8_t>& memoryBlock,
         uint16_t offset,
-        uint16_t count,
         std::function<bool(uint16_t address, uint8_t value)> notifyFunc)
     :
-        MappedMemoryBlock(memoryBlock, offset, count),
+        MappedMemoryBlock<N>(memoryBlock, offset),
         m_handleFunc(notifyFunc)
     {}
 
@@ -36,7 +34,7 @@ public:
     {
         if (m_handleFunc(relativeAddress, byte))
         {
-            MappedMemoryBlock::Write(relativeAddress, byte);
+            MappedMemoryBlock<N>::Write(relativeAddress, byte);
         }
     };
 

@@ -52,9 +52,10 @@ public:
 
     bool IsLoaded() const;
 
-    WeakMappedMemoryBlock GetMemoryFixedRomBank() const { return WeakMappedMemoryBlock(m_pFixedRomBank); }
-    WeakMappedMemoryBlock GetMemorySwitchableRomBank() const { return WeakMappedMemoryBlock(m_pSwitchableRomBank); }
-    WeakMappedMemoryBlock GetMemoryExternalRam() const { return WeakMappedMemoryBlock<(m_pExternalRam); }
+    std::shared_ptr<MappedRegister> GetMappedBootRomReg() const { return std::shared_ptr<MappedRegister>(m_bootRomReg); }
+    WeakMappedMemoryBlock<0x4000> GetMemoryFixedRomBank() const { return WeakMappedMemoryBlock<0x4000>(m_pFixedRomBank); }
+    WeakMappedMemoryBlock<0x4000> GetMemorySwitchableRomBank() const { return WeakMappedMemoryBlock<0x4000>(m_pSwitchableRomBank); }
+    WeakMappedMemoryBlock<0x2000> GetMemoryExternalRam() const { return WeakMappedMemoryBlock<0x2000>(m_pExternalRam); }
 
 private:
     void ValidateRom();
@@ -62,7 +63,6 @@ private:
 
     void SwitchRomBanks();
     void SwitchRamBanks();
-    void SwitchFixedRom(bool useFixed, uint16_t offset);
 
     void SwitchFixedRom(bool useFixed, std::size_t offset);
     void SwitchSwitchableRom(bool useFixed, std::size_t offset);
@@ -84,10 +84,10 @@ private:
     uint8_t m_ramSize;
     MapperChip m_mapperChip;
 
-    std::shared_ptr<CatridgeMemoryBlockController> m_pFixedRomBank;
-    std::shared_ptr<CatridgeMemoryBlockController> m_pSwitchableRomBank;
-    std::shared_ptr<CatridgeMemoryBlockController> m_pExternalRam;
-    CatridgeBootRomRegister m_bootRomReg;
+    std::shared_ptr<CatridgeMemoryBlockController<0x4000>> m_pFixedRomBank;
+    std::shared_ptr<CatridgeMemoryBlockController<0x4000>> m_pSwitchableRomBank;
+    std::shared_ptr<CatridgeMemoryBlockController<0x2000>> m_pExternalRam;
+    std::shared_ptr<CatridgeBootRomRegister> m_bootRomReg;
 
     MemoryBlock<0x4000> m_fixedRomBank;
     MemoryBlock<0x4000> m_switchableRomBank;

@@ -28,8 +28,9 @@ public:
     MCycles Execute(uint8_t opcode);
 
     // Test Helpers
-    Registers& GetRegister();
-    const Registers& GetRegister() const;
+    Registers& GetRegister() { return m_reg; }
+    const Registers& GetRegister() const { return m_reg; }
+    const CpuState& GetState() const { return m_state; }
     int GetEi() const;
     void SetEi(int value);
     void EnableTestMode();

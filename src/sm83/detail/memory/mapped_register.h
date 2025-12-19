@@ -1,14 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <array>
 
 #include "bitmanip.h"
 
 namespace detail {
-
-template<std::size_t N>
-using MemoryBlock = std::array<uint8_t, N>;
 
 class MappedRegister
 {
@@ -44,7 +40,7 @@ public:
         ::SetBitToFalse<Bit>(m_reg);
     }
 
-private:
+protected:
     uint8_t& m_reg;
 };
 

@@ -19,12 +19,13 @@ MmuImpl::MmuImpl():
     m_videoRam(),
     m_externalRam(),
     m_workingRam(),
-    m_echoRam(m_workingRam, 0, 0x1E00),
+    m_echoRam(m_workingRam, 0),
     m_objectAttributeMemory(),
     m_notUsable(),
     m_input(),
     m_highRam(),
-    m_interruptEnable()
+    m_fakeEchoRam(),
+    m_bootRomReg()
 {
     memset(m_workingRam.data(), 0, m_workingRam.size());
     memset(m_notUsable.data(), 0, m_notUsable.size());
@@ -164,6 +165,12 @@ void MmuImpl::Write(const uint16_t address, uint8_t byte)
 
     if (address <= REGION_IO_REGISTERS_END)
     {
+        if (auto pBootRomReg = m_bootRomReg.lock(); pBootRomReg && address == REG_BOOT_ROM_MAPPING_CONTROL)
+        {
+            pBootRomReg->Write(byte);
+            return;
+        }
+
         relativeAddress = address - REGION_IO_REGISTERS_START;
         m_input.at(relativeAddress) = byte;
         if (address == REG_DMA_TRANSFER_ADDRESS)
@@ -234,6 +241,8 @@ void MmuImpl::MapMemory(const PpuImpl& ppu)
 
 void MmuImpl::MapMemory(const CatridgeImpl& catridge)
 {
+    m_bootRomReg = catridge.GetMappedBootRomReg();
+
     m_romBankA = catridge.GetMemoryFixedRomBank();
     m_romBankB = catridge.GetMemorySwitchableRomBank();
     m_externalRam = catridge.GetMemoryExternalRam();
@@ -242,7 +251,7 @@ void MmuImpl::MapMemory(const CatridgeImpl& catridge)
 void MmuImpl::DisableTestMode()
 {
     m_testMode = false;
-    m_echoRam = MappedMemoryBlock(m_workingRam, 0, 0x1E00);
+    m_echoRam = MappedMemoryBlock<0x1E00>(m_workingRam, 0);
 }
 
 void MmuImpl::EnableTestMode()
@@ -253,7 +262,7 @@ void MmuImpl::EnableTestMode()
         m_fakeEchoRam.emplace();
         memset(m_fakeEchoRam->data(), 0, m_fakeEchoRam->size());
     }
-    m_echoRam = MappedMemoryBlock(m_fakeEchoRam.value(), 0, 0x1E00);
+    m_echoRam = MappedMemoryBlock<0x1E00>(m_fakeEchoRam.value(), 0);
 }
 
 } // namespace detail

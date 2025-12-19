@@ -1092,16 +1092,6 @@ MCycles CpuImpl::Execute(uint8_t opcode)
     return s_OpCodeCycles[opcode];
 }
 
-Registers& CpuImpl::GetRegister()
-{
-    return m_reg;
-}
-
-const Registers& CpuImpl::GetRegister() const
-{
-    return m_reg;
-}
-
 int CpuImpl::GetEi() const
 {
     return m_state.enableInterruptDelay == 1

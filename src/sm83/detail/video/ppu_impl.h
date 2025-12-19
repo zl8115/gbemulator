@@ -69,27 +69,26 @@ public:
 
     void            SetPpuMode(Mode mode);                 // bit 1 & 0
 
-    WeakMappedMemoryBlock GetMemoryVram() const;
-    WeakMappedMemoryBlock GetMemoryOam() const;
+    WeakMappedMemoryBlock<0x2000> GetMemoryVram() const;
+    WeakMappedMemoryBlock  <0xA0> GetMemoryOam() const;
 
 private:
-    struct MappedRegisters
+    struct MappedMemory
     {
-        MappedRegisters(PpuImpl& ppu, MmuImpl& mmu);
+        MappedMemory(PpuImpl& ppu, MmuImpl& mmu);
 
-        MappedMemoryBlock vram_tileDataBlock0;
-        MappedMemoryBlock vram_tileDataBlock1;
-        MappedMemoryBlock vram_tileDataBlock2;
-        MappedMemoryBlock vram_tileMapBlock0;
-        MappedMemoryBlock vram_tileMapBlock1;
-        MappedMemoryBlock oam;
+        MappedMemoryBlock<0x800> vram_tileDataBlock0;
+        MappedMemoryBlock<0x800> vram_tileDataBlock1;
+        MappedMemoryBlock<0x800> vram_tileDataBlock2;
+        MappedMemoryBlock<0x400> vram_tileMapBlock0;
+        MappedMemoryBlock<0x400> vram_tileMapBlock1;
+        MappedMemoryBlock <0xA0> oam;
         MappedRegister lcdControl;
         MappedRegister lcdStatus;
         MappedRegister viewScrollX;
         MappedRegister viewScrollY;
         MappedRegister lcdYCoord;
         MappedRegister lcdLYCompare;
-        MappedRegister dmaStartAddress;
         MappedRegister bgPalette;
         MappedRegister spritePalette0;
         MappedRegister spritePalette1;
@@ -111,10 +110,10 @@ private:
     CCycles m_cycleCounter;
     MemoryBlock<0x2000> m_vram;
     MemoryBlock<0x100> m_oam;
-    MappedRegisters m_reg;
+    MappedMemory m_reg;
     FrameBuffer m_viewBuffer;
-    std::shared_ptr<MappedMemoryBlock> m_pMappedVram;
-    std::shared_ptr<MappedMemoryBlock> m_pMappedOam;
+    std::shared_ptr<MappedMemoryBlock<0x2000>> m_pMappedVram;
+    std::shared_ptr<MappedMemoryBlock<0xA0>> m_pMappedOam;
 };
 
 } // namespace detail

@@ -13,12 +13,17 @@ public:
         return *mmu.m_pImpl.get();
     }
 
+    static const MmuImpl& ExtractImpl(const Mmu& mmu)
+    {
+        return *mmu.m_pImpl.get();
+    }
+
     static CpuImpl& ExtractImpl(Cpu& cpu)
     {
         return *cpu.m_pImpl.get();
     }
 
-    static const CpuImpl& ExtractImpl(Cpu const& cpu)
+    static const CpuImpl& ExtractImpl(const Cpu& cpu)
     {
         return *cpu.m_pImpl.get();
     }

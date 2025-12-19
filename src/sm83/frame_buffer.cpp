@@ -22,7 +22,7 @@ GbColour FrameBuffer::GetPixel(unsigned int x, unsigned int y) const
 
 void FrameBuffer::Reset()
 {
-    std::fill(m_buffer.begin(), m_buffer.end(), GbColour::Black);
+    std::fill(m_buffer.begin(), m_buffer.end(), GbColour::White);
 }
 
 std::size_t FrameBuffer::GetPixelIndex(unsigned int x, unsigned int y) const

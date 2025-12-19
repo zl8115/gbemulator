@@ -73,8 +73,6 @@ void Soc::LoadRomFromFile(std::string_view romPath)
 {
     auto data = LoadRomData(romPath);
     m_catridge.LoadRom(std::move(data));
-
-    m_ppu.SetDisplayOn();
 }
 
 void Soc::EnableUnitTestMode()
