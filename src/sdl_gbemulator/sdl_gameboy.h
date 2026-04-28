@@ -3,6 +3,7 @@
 #include <soc.h>
 #include <input.h>
 #include <sdl_renderer.h>
+#include <asset_renderer.h>
 
 namespace SdlGb {
 
@@ -14,9 +15,11 @@ public:
     void LoadRom(std::string_view romPath);
     bool ShouldExit();
 
-private:
     Soc m_soc;
+
+private:
     SdlRenderer m_renderer;
+    // AssetRenderer m_assetRenderer;
 };
 
 } // namespace SdlGb

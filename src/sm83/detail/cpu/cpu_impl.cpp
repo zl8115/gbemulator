@@ -2,6 +2,7 @@
 
 #include "bitmanip.h"
 #include "detail/cpu/opcode_cycles.h"
+#include "detail/logger.h"
 #include "detail/register_names.h"
 
 #include <functional>
@@ -1045,6 +1046,7 @@ CpuImpl::CpuImpl(Mmu& mmu):
 
 MCycles CpuImpl::Step()
 {
+    GbStateLogger::LogState(*this);
     if (m_state.halted)
         CheckForInterrupts();
 

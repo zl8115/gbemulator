@@ -1,6 +1,7 @@
 add_subdirectory(sm83)
 add_subdirectory(sdl_renderer)
 add_subdirectory(sdl_gbemulator)
+add_subdirectory(soc_inspector)
 
 # Test SM83 App
 add_executable(Sm83TestApp

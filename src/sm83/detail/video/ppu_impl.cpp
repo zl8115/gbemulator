@@ -5,6 +5,7 @@
 #include "irenderer.h"
 #include "detail/impl_helper.h"
 #include "detail/register_names.h"
+#include "detail/logger.h"
 #include "detail/video/palette.h"
 #include "detail/memory/mmu_impl.h"
 #include "detail/memory/formatter.h"
@@ -194,6 +195,8 @@ void PpuImpl::Render() const
 {
     if (m_pRenderer)
     {
+        GbStateLogger::Log(m_viewBuffer);
+        GbStateLogger::LogState(m_mmu);
         m_pRenderer->Render(m_viewBuffer);
     }
 }

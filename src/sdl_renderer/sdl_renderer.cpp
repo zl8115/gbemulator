@@ -1,70 +1,22 @@
 #include "sdl_renderer.h"
+#include "sdl_helpers.h"
 
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
+#include <SDL3/SDL_render.h>
 #include <irenderer.h>
 #include <input.h>
 #include <frame_buffer.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_oldnames.h>
+#include <detail/logger.h>
 
 #include <cstdint>
 #include <format>
+#include <print>
 
-static bool s_SDLInitialized = false;
-static int s_SDLCreated = 0;
-
-constexpr unsigned int PIXEL_SIZE = 2;
 constexpr unsigned int RENDER_WIDTH = GAMEBOY_WIDTH * PIXEL_SIZE;
 constexpr unsigned int RENDER_HEIGHT = GAMEBOY_HEIGHT * PIXEL_SIZE;
-
-namespace {
-
-uint32_t GetARGBColour(Colour colour)
-{
-    switch (colour)
-    {
-        case Colour::White:
-            return 0xFFFFFFFF;
-        case Colour::LightGrey:
-            return 0xFFAAAAAA;
-        case Colour::DarkGrey:
-            return 0xFF555555;
-        case Colour::Black:
-            return 0xFF000000;
-    }
-    throw std::runtime_error(std::format("Unable to translate colour for Colour {}", static_cast<unsigned short>(colour)));
-};
-
-void SetRenderPixel(uint32_t* pPixels, uint x, uint y, uint32_t pixel)
-{
-    unsigned int heightOffset = RENDER_WIDTH * PIXEL_SIZE * y;
-    unsigned int widthOffset = PIXEL_SIZE * x;
-    for (int h = 0; h < PIXEL_SIZE; ++h)
-    {
-        unsigned int heightIndex = heightOffset + (h * RENDER_WIDTH);
-        for (int w = 0; w < PIXEL_SIZE; ++w)
-        {
-            unsigned int pixelIndex = heightIndex + widthOffset + w;
-            pPixels[pixelIndex] = pixel;
-        }
-    }
-}
-
-void SetRenderPixels(uint32_t* pPixels, const FrameBuffer& buffer)
-{
-    for (unsigned int y = 0; y < GAMEBOY_HEIGHT; y++)
-    {
-        for (unsigned int x = 0; x < GAMEBOY_WIDTH; x++)
-        {
-            Colour colour = buffer.GetPixel(x, y);
-            uint32_t argbColour = ::GetARGBColour(colour);
-            ::SetRenderPixel(pPixels, x, y, argbColour);
-        }
-    }
-}
-
-} // namespace
 
 SdlRenderer::SdlRenderer():
     m_shouldExit(false),
@@ -73,16 +25,7 @@ SdlRenderer::SdlRenderer():
     m_pRenderer(nullptr),
     m_pTexture(nullptr)
 {
-    ++s_SDLCreated;
-    if (!s_SDLInitialized)
-    {
-        s_SDLInitialized = SDL_Init(SDL_INIT_VIDEO);
-    }
-    if (!s_SDLInitialized)
-    {
-        throw std::runtime_error(std::format("Failed to initialise SDL: {}", SDL_GetError()));
-    }
-
+    SdlHelpers::InitSdl();
     m_pWindow.reset(SDL_CreateWindow(
         "gbemu",
         RENDER_WIDTH,
@@ -99,6 +42,7 @@ SdlRenderer::SdlRenderer():
     {
         throw std::runtime_error(std::format("Failed to create renderer: {}", SDL_GetError()));
     }
+    // SDL_SetRenderVSync(m_pRenderer.get(), 1);
 
     m_pTexture.reset(SDL_CreateTexture(
         m_pRenderer.get(),
@@ -115,13 +59,10 @@ SdlRenderer::SdlRenderer():
 
 SdlRenderer::~SdlRenderer()
 {
-    if (--s_SDLCreated <= 0)
-    {
-        SDL_Quit();
-    }
+    SdlHelpers::QuitSdl();
 }
 
-void SdlRenderer::Render(const FrameBuffer& buffer) 
+void SdlRenderer::Render(const FrameBuffer& buffer)
 {
     ProcessEvents();
     if (m_pGbInput)
@@ -136,7 +77,7 @@ void SdlRenderer::Render(const FrameBuffer& buffer)
     SDL_LockTexture(m_pTexture.get(), nullptr, &pPixels, &pitch);
 
     uint32_t* pixels = static_cast<uint32_t*>(pPixels);
-    ::SetRenderPixels(pixels, buffer);
+    SetPixels(pixels, buffer);
     SDL_UnlockTexture(m_pTexture.get());
 
     SDL_RenderTexture(m_pRenderer.get(), m_pTexture.get(), nullptr, nullptr);
@@ -165,8 +106,8 @@ std::optional<GbButton> GetGbButton(int keyCode)
 
 void SdlRenderer::ProcessEvents()
 {
+    static bool toggle;
     SDL_Event event;
-
     while (SDL_PollEvent(&event))
     {
         switch (event.type)
@@ -179,6 +120,15 @@ void SdlRenderer::ProcessEvents()
                 }
                 if (auto button = GetGbButton(event.key.key); m_pGbInput && button)
                 {
+                    std::println("{}", static_cast<int>(button.value()));
+                    // if (button.value_or(GbButton::A) == GbButton::Start)
+                    // {
+                    //     toggle = ~toggle;
+                    //     if (toggle)
+                    //         GbStateLogger::SetLogDir("/home/zerongl/src/gbemulator-worktree/sm83logs/");
+                    //     else
+                    //         GbStateLogger::UnsetLogDir();
+                    // }
                     m_pGbInput->ButtonPressed(button.value());
                 }
                 break;
@@ -191,6 +141,7 @@ void SdlRenderer::ProcessEvents()
                 }
                 if (auto button = GetGbButton(event.key.key); m_pGbInput && button)
                 {
+                    std::println("{}", static_cast<int>(button.value()));
                     m_pGbInput->ButtonPressed(button.value());
                 }
                 break;

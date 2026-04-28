@@ -1,6 +1,10 @@
 add_library(SdlRenderer STATIC
+    asset_renderer.h
     sdl_renderer.h
+
+    asset_renderer.cpp
     sdl_renderer.cpp
+    sdl_helpers.cpp
 )
 target_link_libraries(
     SdlRenderer

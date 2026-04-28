@@ -18,6 +18,7 @@ add_library(Sm83 STATIC
     ppu.cpp
     soc.cpp
 
+    detail/logger.cpp
     detail/catridge/catridge_impl.cpp
     detail/cpu/cpu_impl.cpp
     detail/cpu/opcode_cycles.cpp

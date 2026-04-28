@@ -1,34 +1,12 @@
 #pragma once
 
+#include "sdl_helpers.h"
+
 #include <irenderer.h>
 #include <SDL3/SDL.h>
 #include <memory>
 
 class Input;
-
-struct SDLRendererDestroyer
-{
-    void operator()(SDL_Renderer* ptr)
-    {
-        SDL_DestroyRenderer(ptr);
-    }
-};
-
-struct SDLTextureDestroyer
-{
-    void operator()(SDL_Texture* ptr)
-    {
-        SDL_DestroyTexture(ptr);
-    }
-};
-
-struct SDLWindowDestroyer
-{
-    void operator()(SDL_Window* ptr)
-    {
-        SDL_DestroyWindow(ptr);
-    }
-};
 
 class SdlRenderer: public IRenderer
 {
