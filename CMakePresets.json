@@ -1,32 +1,80 @@
 {
-    "version": 3,
-    "configurePresets": [
-        {
-            "name": "gcc-common",
-            "description": "gcc base",
-            "hidden": true,
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "gcc",
-                "CMAKE_CXX_COMPILER": "g++",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-            }
-        },
-        {
-            "name": "gcc-debug",
-            "description": "gcc Debug",
-            "inherits": "gcc-common",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
-            "name": "gcc-release",
-            "description": "gcc Release",
-            "inherits": "gcc-common",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-            }
-        }
-    ]
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "debug-gcc-linux",
+      "description": "Debug-GCC-Linux",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-g -fsanitize=address,undefined"
+      }
+    },
+    {
+      "name": "release-gcc-linux",
+      "description": "Release-GCC-Linux",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "msvc-base",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "debug-msvc-windows",
+      "description": "Debug-MSVC-Windows",
+      "inherits": "msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release-msvc-windows",
+      "description": "Release-MSVC-Windows",
+      "inherits": "msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug-gcc-linux", "configurePreset": "debug-gcc-linux" },
+    { "name": "release-gcc-linux", "configurePreset": "release-gcc-linux" },
+    { "name": "debug-msvc-windows", "configurePreset": "debug-msvc-windows" },
+    { "name": "release-msvc-windows", "configurePreset": "release-msvc-windows" }
+  ],
+  "testPresets": [
+    { "name": "debug-gcc-linux", "configurePreset": "debug-gcc-linux", "output": { "outputOnFailure": true } },
+    { "name": "release-gcc-linux", "configurePreset": "release-gcc-linux", "output": { "outputOnFailure": true } },
+    { "name": "debug-msvc-windows", "configurePreset": "debug-msvc-windows", "output": { "outputOnFailure": true } },
+    { "name": "release-msvc-windows", "configurePreset": "release-msvc-windows", "output": { "outputOnFailure": true } }
+  ]
 }

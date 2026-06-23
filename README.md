@@ -7,7 +7,7 @@ Also serves as a toy project for various other technology like SDL3 and CPM.cmak
 
 ### Prerequisites
 - A C++23 compliant compiler - currently targeting Clang 16+
-- CMake 3.10+
+- CMake 3.25+
 
 ### Build
 The project uses a standard CMake workflow:
@@ -15,8 +15,8 @@ The project uses a standard CMake workflow:
 ```bash
 mkdir build
 cd build
-cmake .. --preset gcc-release
-cmake . --preset gcc-release
+cmake .. --preset release-gcc-linux
+cmake . --preset release-gcc-linux
 ```
 
 ## References
