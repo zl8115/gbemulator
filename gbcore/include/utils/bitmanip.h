@@ -2,6 +2,9 @@
 
 #include <cstdint>
 
+namespace gb {
+namespace utils {
+
 inline bool CheckBit(const uint8_t value, uint8_t bit)
 {
     return (value & (1 << bit)) != 0;
@@ -65,3 +68,6 @@ inline uint8_t Msb(uint16_t word)
 {
     return word >> 8;
 }
+
+} // namespace utils
+} // namespace gb

@@ -7,16 +7,29 @@ Also serves as a toy project for various other technology like SDL3 and CPM.cmak
 
 ### Prerequisites
 - A C++23 compliant compiler - currently targeting Clang 16+
-- CMake 3.10+
+- CMake 3.25+
 
 ### Build
-The project uses a standard CMake workflow:
+The project uses CMake presets:
 
 ```bash
-mkdir build
-cd build
-cmake .. --preset gcc-release
-cmake . --preset gcc-release
+cmake --preset release-gcc-linux
+cmake --build --preset release-gcc-linux
+```
+
+Available presets: `debug-gcc-linux`, `release-gcc-linux`, `debug-msvc-windows`, `release-msvc-windows`.
+
+### Test
+Run the test suite via CTest:
+
+```bash
+ctest --preset release-gcc-linux --output-on-failure
+```
+
+Or run the test binary directly (it's a Catch2 executable, so standard Catch2 CLI flags apply, e.g. `--list-tests` or a tag like `"[timer]"`):
+
+```bash
+./build/release-gcc-linux/gbcore/tests/gbtest
 ```
 
 ## References

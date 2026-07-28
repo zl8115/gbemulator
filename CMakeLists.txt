@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 
 project(
     GameBoyEmulator
@@ -17,7 +17,8 @@ set(CMAKE_CXX_STANDARD_MINIMUM 23)
 # when compiling with PCH enabled
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(Dependencies.cmake)
+include(cmake/dependencies.cmake)
 include(CTest)
+enable_testing()
 
-add_subdirectory(src)
+add_subdirectory(gbcore)
