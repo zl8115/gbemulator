@@ -9,6 +9,9 @@
 namespace gb {
 
 class Timer;
+class Cartridge;
+class Ppu;
+class Input;
 
 class Mmu {
 public:
@@ -63,10 +66,18 @@ public:
     }
 
     void MapTimer(Timer& timer);
+    void MapCartridge(Cartridge& cartridge);
+    void MapPpu(Ppu& ppu);
+    void MapInput(Input& input);
 
 private:
+    void PerformDmaTransfer(Reg8 sourceHighByte);
+
     std::array<Reg8, 0x10000> m_memory{};
     Timer* m_timer = nullptr;
+    Cartridge* m_cartridge = nullptr;
+    Ppu* m_ppu = nullptr;
+    Input* m_input = nullptr;
 };
 
 } // namespace gb

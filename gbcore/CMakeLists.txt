@@ -4,8 +4,13 @@
 # add_subdirectory(soc_inspector)
 
 add_library(gbcore STATIC
+    src/cartridge.cpp
     src/cpu.cpp
+    src/frame_buffer.cpp
+    src/gb_emulator.cpp
+    src/input.cpp
     src/mmu.cpp
+    src/ppu.cpp
     src/timer.cpp
 
     src/detail/cpu_opcode.cpp

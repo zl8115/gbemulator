@@ -1,5 +1,9 @@
 add_executable(gbtest
+    src/test_cartridge.cpp
     src/test_cpu.cpp
+    src/test_gb_emulator.cpp
+    src/test_input.cpp
+    src/test_ppu.cpp
     src/test_timer.cpp)
 
 target_link_libraries(gbtest PRIVATE
